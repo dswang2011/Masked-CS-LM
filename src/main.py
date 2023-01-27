@@ -14,9 +14,16 @@ inputs['labels'] = inputs.input_ids.detach.clone()
 # and the not a CLS (101) or SEP (102) token condition, and PAD tokens (0 input ids).
 
 # create random array of floats with equal dimensions to input_ids tensor
+
+
 rand = torch.rand(inputs.input_ids.shape)
 # create mask array
-mask_arr = (rand < 0.15) * (inputs.input_ids != 101) * \
+threshold = (rand < 0.50)
+while torch.all(threshold[:,:192]):
+    rand = torch.rand(inputs.input_ids.shape)
+    threshold = (rand < 0.50)
+    
+mask_arr = threshold * (inputs.input_ids != 101) * \
            (inputs.input_ids != 102) * (inputs.input_ids != 0)
 
 
@@ -30,7 +37,8 @@ for i in range(inputs.input_ids.shape[0]):
 
 # Step2: Apply these indices to each respective row in input_ids, assigning [MASK] positions as 103.
 for i in range(inputs.input_ids.shape[0]):
-    inputs.input_ids[i, selection[i]] = 103
+    if selection[i] < 192:
+        inputs.input_ids[i, selection[i]] = 103
 
 
 
