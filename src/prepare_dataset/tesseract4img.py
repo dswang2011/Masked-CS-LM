@@ -14,6 +14,7 @@ def _load_image(image_path):
     return image, (w, h)
 
 
+# double checked
 def doc_to_cs(one_doc):
     texts,bboxes = [],[]
 
@@ -30,14 +31,16 @@ def doc_to_cs(one_doc):
             text = ' '.join(window_tokens)
             texts.append(text)
             bboxes.append(boxes[l])
-
-            window_tokens.append(tokens[i])
             # reset the params
             l = i
             block_num = curr_id
             window_tokens = [tokens[i]]
         else:
             window_tokens.append(tokens[i])
+    text = ' '.join(window_tokens)
+    texts.append(text)
+    bboxes.append(boxes[l])
+
     return texts,bboxes
 
 
