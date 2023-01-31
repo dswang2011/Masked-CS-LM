@@ -69,7 +69,7 @@ class LayoutLMEmbeddings(nn.Module):
 
         self.h_position_embeddings = nn.Embedding(config.max_2d_position_embeddings, config.hidden_size)
         self.w_position_embeddings = nn.Embedding(config.max_2d_position_embeddings, config.hidden_size)
-        self.token_type_embeddings = nn.Embedding(config.type_vocab_size, config.hidden_size)
+        # self.token_type_embeddings = nn.Embedding(config.type_vocab_size, config.hidden_size)
 
         self.LayerNorm = LayoutLMLayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
@@ -79,11 +79,12 @@ class LayoutLMEmbeddings(nn.Module):
     def forward(
         self,
         input_ids=None,
-        bbox=None,
+        h=None,
+        w=None,
         angle=None,
         distance=None,
         segmentation_ids=None,
-        token_type_ids=None,
+        #token_type_ids=None,
         position_ids=None,
         inputs_embeds=None,
     ):
@@ -122,9 +123,9 @@ class LayoutLMEmbeddings(nn.Module):
         angle_embeddings = self.angle_embeddings(angle)
         distance_embeddings = self.distance_embeddings(distance)
         segmentation_ids_embeddings = self.segmentation_ids_embeddings(segmentation_ids)
-        h_position_embeddings = self.h_position_embeddings(bbox[:, :, 3] - bbox[:, :, 1])
-        w_position_embeddings = self.w_position_embeddings(bbox[:, :, 2] - bbox[:, :, 0])
-        token_type_embeddings = self.token_type_embeddings(token_type_ids)
+        h_position_embeddings = self.h_position_embeddings(h)
+        w_position_embeddings = self.w_position_embeddings(w)
+        #token_type_embeddings = self.token_type_embeddings(token_type_ids)
 
         # NOTICE: the way to calculate embeddings is changed correspondingly
         embeddings = torch.cat(
@@ -135,7 +136,7 @@ class LayoutLMEmbeddings(nn.Module):
             + segmentation_ids_embeddings
             + h_position_embeddings
             + w_position_embeddings
-            + token_type_embeddings
+            #+ token_type_embeddings
         )
         embeddings = self.LayerNorm(embeddings)
         embeddings = self.dropout(embeddings)
@@ -630,9 +631,9 @@ class LayoutLMPreTrainedModel(PreTrainedModel):
     models.
     """
 
-    config_class = LayoutLMConfig
+    config_class = CSModelConfig
     pretrained_model_archive_map = LAYOUTLM_PRETRAINED_MODEL_ARCHIVE_LIST
-    base_model_prefix = "layoutlm"
+    base_model_prefix = "csmodel"
     supports_gradient_checkpointing = True
     _keys_to_ignore_on_load_missing = [r"position_ids"]
 
@@ -754,10 +755,15 @@ class LayoutLMModel(LayoutLMPreTrainedModel):
     def forward(
         self,
         input_ids: Optional[torch.LongTensor] = None,
-        bbox: Optional[torch.LongTensor] = None,
+        #bbox: Optional[torch.LongTensor] = None,
         attention_mask: Optional[torch.FloatTensor] = None,
         token_type_ids: Optional[torch.LongTensor] = None,
         position_ids: Optional[torch.LongTensor] = None,
+        angle: Optional[torch.FloatTensor] = None,
+        distance: Optional[torch.FloatTensor] = None,
+        segmentation_ids: Optional[torch.LongTensor] = None,
+        h: Optional[torch.FloatTensor] = None, 
+        w: Optional[torch.FloatTensor] = None,
         head_mask: Optional[torch.FloatTensor] = None,
         inputs_embeds: Optional[torch.FloatTensor] = None,
         encoder_hidden_states: Optional[torch.FloatTensor] = None,
@@ -842,10 +848,12 @@ class LayoutLMModel(LayoutLMPreTrainedModel):
 
         embedding_output = self.embeddings(
             input_ids=input_ids,
-            bbox=bbox,
+            #bbox=bbox,
             position_ids=position_ids,
             angle=angle,
             distance=distance,
+            h=h,
+            w=w,
             segmentation_ids=segmentation_ids,
             token_type_ids=token_type_ids,
             inputs_embeds=inputs_embeds,
