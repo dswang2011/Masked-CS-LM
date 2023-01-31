@@ -7,6 +7,8 @@ from datasets import Dataset, load_from_disk
 import numpy as np
 import img_util
 import cs_util
+import tok_util
+from datasets import Dataset,Features,Sequence, Value, Array2D, Array3D
 
 def _load_image(image_path):
     image = Image.open(image_path).convert("RGB")
@@ -15,8 +17,9 @@ def _load_image(image_path):
 
 
 # double checked
-def doc_to_cs(one_doc):
+def doc_to_segs(one_doc):
     texts,bboxes = [],[]
+    word_nums = []
 
     seg_ids = one_doc['seg_ids']
     tokens = one_doc['tokens']
@@ -28,6 +31,7 @@ def doc_to_cs(one_doc):
     for i in range(1,len(seg_ids)):
         curr_id = seg_ids[i]
         if curr_id!=block_num:
+            word_nums.append(len(window_tokens))
             text = ' '.join(window_tokens)
             texts.append(text)
             bboxes.append(boxes[l])
@@ -37,11 +41,12 @@ def doc_to_cs(one_doc):
             window_tokens = [tokens[i]]
         else:
             window_tokens.append(tokens[i])
+    word_nums.append(len(window_tokens))
     text = ' '.join(window_tokens)
     texts.append(text)
     bboxes.append(boxes[l])
 
-    return texts,bboxes
+    return texts,bboxes, word_nums
 
 
 def image_to_doc(image_path, adjust_share_bbox=True):
@@ -50,7 +55,6 @@ def image_to_doc(image_path, adjust_share_bbox=True):
     '''
     # save to:
     one_doc = {'tokens':[],'bboxes':[], 'seg_ids':[],'image':None}
-
 
     image, size = _load_image(image_path)
     data = pytesseract.image_to_data(Image.open(image_path),output_type='dict')
@@ -92,11 +96,9 @@ def image_to_doc(image_path, adjust_share_bbox=True):
     return one_doc
 
 
-
 def get_img2doc_data(img_dir):
     res = {}    # a dict of dict, i.e., {docID_pageNO : {one_doc_info}}
     for doc_idx, file in enumerate(sorted(os.listdir(img_dir))):
-        print('process:',doc_idx,file)
         image_path = os.path.join(img_dir, file)
         one_doc = image_to_doc(image_path)
         docID_pageNO = file.replace(".png", "")
@@ -140,21 +142,38 @@ def wrap_and_save(base, split):
 
 
 if __name__=='__main__':
+
+    # step1: using OCR to extract seg texts and boxes from img
     file_path = '/home/ubuntu/air/vrdu/datasets/docvqa/test/documents/ffdw0217_13.png'
     # file_path = '/home/ubuntu/air/vrdu/datasets/images/imagesa/a/a/a/aaa06d00/50486482-6482.tif'
     one_doc = image_to_doc(file_path)
-    texts, boxes = doc_to_cs(one_doc)
-    for text, box in zip(texts,boxes):
-        print(text, box)
+    texts, boxes, token_nums = doc_to_segs(one_doc)
 
-    edge_index, edge_attr = cs_util.rolling_neibor_matrix(boxes)
-    u,v = edge_index
 
-    for i,(u,v) in enumerate(zip(u,v)):
-        print(u,'==v.s.==',v)
-        print(texts[u], '==v.s.==', texts[v])
-        print(boxes[u],'==v.s.==',boxes[v])
-        print(edge_attr[i])
-        print('----------')
+    # step2: wrap to huggingface dataset
+    final_dict = tok_util.doc_2_final_dict(boxes,texts,token_nums)
+    dataset = Dataset.from_dict(final_dict).with_format("torch")
+    print(dataset)
+    for i,row in enumerate(dataset):
+        print('------')
+        # print(texts[i])
+        for k,v in row.items():
+            print(k,v)
+        if i>2:
+            break
+
+
+    # step3: models
+
+
+    # edge_index, edge_attr = cs_util.rolling_neibor_matrix(boxes)
+    # u,v = edge_index
+
+    # for i,(u,v) in enumerate(zip(u,v)):
+    #     print(u,'==v.s.==',v)
+    #     print(texts[u], '==v.s.==', texts[v])
+    #     print(boxes[u],'==v.s.==',boxes[v])
+    #     print(edge_attr[i])
+    #     print('----------')
 
     

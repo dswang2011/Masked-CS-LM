@@ -1,4 +1,6 @@
 
+import torch
+
 
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 model = BertForMaskedLM.from_pretrained(opt.bert_path)
@@ -16,29 +18,34 @@ inputs['labels'] = inputs.input_ids.detach.clone()
 # create random array of floats with equal dimensions to input_ids tensor
 
 
-rand = torch.rand(inputs.input_ids.shape)
-# create mask array
-threshold = (rand < 0.50)
-while torch.all(threshold[:,:192]):
-    rand = torch.rand(inputs.input_ids.shape)
-    threshold = (rand < 0.50)
-    
-mask_arr = threshold * (inputs.input_ids != 101) * \
-           (inputs.input_ids != 102) * (inputs.input_ids != 0)
+def masked_inputs(batch_encodings):
+    rand_mat = torch.rand(batch_encodings.input_ids.shape)
+    # create mask array
+    threshold = (rand_mat < 0.50)
+    cnt = 0
+    while torch.all(threshold[:,:192]):
+        rand_mat = torch.rand(batch_encodings.input_ids.shape)
+        threshold = (rand_mat < 0.50)
+        cnt+=1
+        if cnt>10: break
+        
+    mask_arr = threshold * (inputs.input_ids != 101) * \
+            (batch_encodings.input_ids != 102) * (inputs.input_ids != 0)
 
 
-# now we take the indices of each True value, for each vector.
-selection = []  # positions that are masked
-for i in range(inputs.input_ids.shape[0]):
-    selection.append(
-        torch.flatten(mask_arr[i].nonzero()).tolist()
-    )
+    # now we take the indices of each True value, for each vector.
+    selection = []  # positions that are masked
+    for i in range(batch_encodings.input_ids.shape[0]):
+        select = torch.flatten(mask_arr[i].nonzero()).tolist()
+        select = [item for item in select if item < 192]
+        selection.append(selection)
 
 
-# Step2: Apply these indices to each respective row in input_ids, assigning [MASK] positions as 103.
-for i in range(inputs.input_ids.shape[0]):
-    if selection[i] < 192:
-        inputs.input_ids[i, selection[i]] = 103
+    # Step2: Apply these indices to each respective row in input_ids, assigning [MASK] positions as 103.
+    for i in range(batch_encodings.input_ids.shape[0]):
+        batch_encodings.input_ids[i, selection[i]] = 103
+
+    return selection, inputs
 
 
 

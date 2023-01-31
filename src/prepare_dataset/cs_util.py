@@ -138,3 +138,13 @@ def rolling_neibor_matrix(bboxs):
     edge_index = [u,v]
     return edge_index, edge_attr
 
+
+def rolling_8neibors(bboxs):
+    pair_lookup = _fully_connected_matrix(bboxs)
+    neibors = []
+    for idx in range(len(bboxs)):
+        direct2near = _eight_neibs(idx, len(bboxs), pair_lookup)
+        # value = (dist, direct, neib_idx)
+        neibors.append(direct2near)
+    return neibors
+

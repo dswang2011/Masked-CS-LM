@@ -82,7 +82,6 @@ class RobertaClassifier(nn.Module):
         # self.roberta = RobertaModel(self.config)
         self.roberta = RobertaModel.from_pretrained(opt.roberta_dir, config=self.config)
 
-
         self.classifier = nn.Sequential(
             nn.Linear(self.opt.input_dim,self.opt.input_dim),   # hidden dim
             nn.ReLU(),
