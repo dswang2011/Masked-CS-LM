@@ -40,41 +40,34 @@ class LayoutLMEmbeddings(nn.Module):
     def __init__(self, config):
         super(LayoutLMEmbeddings, self).__init__()
 
-        # NOTICE: this could be defined in a better way
-        # here is just the V1 solution
-        # manually disentangle the 512-dim representation into 192 dims for the central block
-        # and 40 dims for each of the 8 surrounding block
-        self.block_embeddings = []
-        self.block_hidden_size = [192] + [40] * 8
-        for i in range(9):
-            self.block_embeddings.append(nn.Embedding(config.vocab_size, config.block_hidden_size[i], padding_idx=config.pad_token_id))
-        self.word_embeddings = torch.cat(self.block_embeddings)
-
-        # self.word_embeddings = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=config.pad_token_id)
+        self.number_of_compoents = 8
+        self.word_embeddings = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=config.pad_token_id)
         self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.hidden_size)
-
-        # NOTICE: we may not care about the absolute position of each block
-        # so x_/y_position_embeddings can be removed
-        # self.x_position_embeddings = nn.Embedding(config.max_2d_position_embeddings, config.hidden_size)
-        # self.y_position_embeddings = nn.Embedding(config.max_2d_position_embeddings, config.hidden_size)
 
         # NOTICE: we add angle and distance as input to model the relative positions
         # so angle and distance embeddings are added correspondingly
-        self.angle_embeddings = nn.Embedding(config.max_2d_position_embeddings, config.hidden_size)
-        self.distance_embeddings = nn.Embedding(config.max_2d_position_embeddings, config.hidden_size)
+        self.angle_embeddings_center = nn.Embedding(config.max_2d_position_embeddings, 192)
+        self.angle_embeddings_others = nn.Embedding(config.max_2d_position_embeddings, 40)
+
+        self.distance_embeddings_center = nn.Embedding(config.max_2d_position_embeddings, 192)
+        self.distance_embeddings_others = nn.Embedding(config.max_2d_position_embeddings, 40)
 
         # NOTICE: add segmentation id embeddings
         # the config can be reused max_position_embeddings is set to be 512
-        self.segmentation_ids_embeddings = nn.Embedding(config.max_position_embeddings, config.hidden_size)
+        self.segmentation_ids_embeddings_center = nn.Embedding(config.max_2d_position_embeddings, 192)
+        self.segmentation_ids_embeddings_others = nn.Embedding(config.max_2d_position_embeddings, 40)
 
-        self.h_position_embeddings = nn.Embedding(config.max_2d_position_embeddings, config.hidden_size)
-        self.w_position_embeddings = nn.Embedding(config.max_2d_position_embeddings, config.hidden_size)
+        self.h_position_embeddings_center = nn.Embedding(config.max_2d_position_embeddings, 192)
+        self.h_position_embeddings_others = nn.Embedding(config.max_2d_position_embeddings, 40)
+        self.w_position_embeddings_center = nn.Embedding(config.max_2d_position_embeddings, 192)
+        self.w_position_embeddings_others = nn.Embedding(config.max_2d_position_embeddings, 40)
         # self.token_type_embeddings = nn.Embedding(config.type_vocab_size, config.hidden_size)
 
         self.LayerNorm = LayoutLMLayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
         self.register_buffer("position_ids", torch.arange(config.max_position_embeddings).expand((1, -1)))
+
 
     def forward(
         self,
@@ -109,23 +102,30 @@ class LayoutLMEmbeddings(nn.Module):
         words_embeddings = inputs_embeds
         position_embeddings = self.position_embeddings(position_ids)
 
-        # NOTICE: remove absolute position embeddings
-        '''
-        try:
-            left_position_embeddings = self.x_position_embeddings(bbox[:, :, 0])
-            upper_position_embeddings = self.y_position_embeddings(bbox[:, :, 1])
-            right_position_embeddings = self.x_position_embeddings(bbox[:, :, 2])
-            lower_position_embeddings = self.y_position_embeddings(bbox[:, :, 3])
-        except IndexError as e:
-            raise IndexError("The `bbox`coordinate values should be within 0-1000 range.") from e
-        '''
+        angle_embeddings_list = [self.angle_embeddings_center(angle[0])]
+        for i in range(self.number_of_compoents):
+            angle_embeddings_list.append(self.angle_embeddings_others(angle[i+1]))
+        angle_embeddings = torch.cat(angle_embeddings_list)
 
-        angle_embeddings = self.angle_embeddings(angle)
-        distance_embeddings = self.distance_embeddings(distance)
-        segmentation_ids_embeddings = self.segmentation_ids_embeddings(segmentation_ids)
-        h_position_embeddings = self.h_position_embeddings(h)
-        w_position_embeddings = self.w_position_embeddings(w)
-        #token_type_embeddings = self.token_type_embeddings(token_type_ids)
+        distance_embeddings_list = [self.distance_embeddings_center(distance[0])]
+        for i in range(self.number_of_compoents):
+            distance_embeddings_list.append(self.distance_embeddings_others(distance[i+1]))
+        distance_embeddings = torch.cat(distance_embeddings_list)
+
+        segmentation_ids_embeddings_list = [self.segmentation_ids_embeddings_center(segmentation_ids[0])]
+        for i in range(self.number_of_compoents):
+            segmentation_ids_embeddings_list.append(self.segmentation_ids_embeddings_others(segmentation_ids[i+1]))
+        segmentation_ids_embeddings = torch.cat(segmentation_ids_embeddings_list)
+
+        h_position_embeddings_list = [self.h_position_embeddings_center(h[0])]
+        for i in range(self.number_of_compoents):
+            h_position_embeddings_list.append(self.h_position_embeddings_others(h[i+1]))
+        h_position_embeddings = torch.cat(h_position_embeddings_list)
+        
+        w_position_embeddings_list = [self.w_position_embeddings_center(w[0])]
+        for i in range(self.number_of_compoents):
+            w_position_embeddings_list.append(self.w_position_embeddings_others(w[i+1]))
+        w_position_embeddings = torch.cat(w_position_embeddings_list)
 
         # NOTICE: the way to calculate embeddings is changed correspondingly
         embeddings = torch.cat(
