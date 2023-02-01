@@ -830,9 +830,6 @@ class LayoutLMModel(LayoutLMPreTrainedModel):
         if token_type_ids is None:
             token_type_ids = torch.zeros(input_shape, dtype=torch.long, device=device)
 
-        if bbox is None:
-            bbox = torch.zeros(input_shape + (4,), dtype=torch.long, device=device)
-
         extended_attention_mask = attention_mask.unsqueeze(1).unsqueeze(2)
 
         extended_attention_mask = extended_attention_mask.to(dtype=self.dtype)
