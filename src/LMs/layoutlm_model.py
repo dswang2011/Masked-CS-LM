@@ -112,6 +112,8 @@ class LayoutLMEmbeddings(nn.Module):
             distance_embeddings_list.append(self.distance_embeddings_others(distance[i+1]))
         distance_embeddings = torch.cat(distance_embeddings_list)
 
+        if not segmentation_ids:
+            segmentation_ids = torch.Tensor([i for i in range(9)])
         segmentation_ids_embeddings_list = [self.segmentation_ids_embeddings_center(segmentation_ids[0])]
         for i in range(self.number_of_compoents):
             segmentation_ids_embeddings_list.append(self.segmentation_ids_embeddings_others(segmentation_ids[i+1]))
