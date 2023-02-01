@@ -44,13 +44,13 @@ class LayoutLMEmbeddings(nn.Module):
         self.word_embeddings = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=config.pad_token_id)
         self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.hidden_size)
 
-        # NOTICE: we add angle and distance as input to model the relative positions
-        # so angle and distance embeddings are added correspondingly
-        self.angle_embeddings_center = nn.Embedding(config.max_2d_position_embeddings, 192)
-        self.angle_embeddings_others = nn.Embedding(config.max_2d_position_embeddings, 40)
+        # NOTICE: we add direct and dist as input to model the relative positions
+        # so direct and dist embeddings are added correspondingly
+        self.direct_embeddings_center = nn.Embedding(config.max_2d_position_embeddings, 192)
+        self.direct_embeddings_others = nn.Embedding(config.max_2d_position_embeddings, 40)
 
-        self.distance_embeddings_center = nn.Embedding(config.max_2d_position_embeddings, 192)
-        self.distance_embeddings_others = nn.Embedding(config.max_2d_position_embeddings, 40)
+        self.dist_embeddings_center = nn.Embedding(config.max_2d_position_embeddings, 192)
+        self.dist_embeddings_others = nn.Embedding(config.max_2d_position_embeddings, 40)
 
         # NOTICE: add segmentation id embeddings
         # the config can be reused max_position_embeddings is set to be 512
@@ -72,10 +72,10 @@ class LayoutLMEmbeddings(nn.Module):
     def forward(
         self,
         input_ids=None,
-        h=None,
-        w=None,
-        angle=None,
-        distance=None,
+        dist=None,
+        direct=None,
+        seg_width=None,
+        seg_height=None,
         segmentation_ids=None,
         #token_type_ids=None,
         position_ids=None,
@@ -102,15 +102,15 @@ class LayoutLMEmbeddings(nn.Module):
         words_embeddings = inputs_embeds
         position_embeddings = self.position_embeddings(position_ids)
 
-        angle_embeddings_list = [self.angle_embeddings_center(angle[0])]
+        direct_embeddings_list = [self.direct_embeddings_center(direct[0])]
         for i in range(self.number_of_compoents):
-            angle_embeddings_list.append(self.angle_embeddings_others(angle[i+1]))
-        angle_embeddings = torch.cat(angle_embeddings_list)
+            direct_embeddings_list.append(self.direct_embeddings_others(direct[i+1]))
+        direct_embeddings = torch.cat(direct_embeddings_list)
 
-        distance_embeddings_list = [self.distance_embeddings_center(distance[0])]
+        dist_embeddings_list = [self.dist_embeddings_center(dist[0])]
         for i in range(self.number_of_compoents):
-            distance_embeddings_list.append(self.distance_embeddings_others(distance[i+1]))
-        distance_embeddings = torch.cat(distance_embeddings_list)
+            dist_embeddings_list.append(self.dist_embeddings_others(dist[i+1]))
+        dist_embeddings = torch.cat(dist_embeddings_list)
 
         if not segmentation_ids:
             segmentation_ids = torch.Tensor([i for i in range(9)])
@@ -119,22 +119,22 @@ class LayoutLMEmbeddings(nn.Module):
             segmentation_ids_embeddings_list.append(self.segmentation_ids_embeddings_others(segmentation_ids[i+1]))
         segmentation_ids_embeddings = torch.cat(segmentation_ids_embeddings_list)
 
-        h_position_embeddings_list = [self.h_position_embeddings_center(h[0])]
+        h_position_embeddings_list = [self.h_position_embeddings_center(seg_height[0])]
         for i in range(self.number_of_compoents):
-            h_position_embeddings_list.append(self.h_position_embeddings_others(h[i+1]))
+            h_position_embeddings_list.append(self.h_position_embeddings_others(seg_height[i+1]))
         h_position_embeddings = torch.cat(h_position_embeddings_list)
         
-        w_position_embeddings_list = [self.w_position_embeddings_center(w[0])]
+        w_position_embeddings_list = [self.w_position_embeddings_center(seg_width[0])]
         for i in range(self.number_of_compoents):
-            w_position_embeddings_list.append(self.w_position_embeddings_others(w[i+1]))
+            w_position_embeddings_list.append(self.w_position_embeddings_others(seg_width[i+1]))
         w_position_embeddings = torch.cat(w_position_embeddings_list)
 
         # NOTICE: the way to calculate embeddings is changed correspondingly
         embeddings = torch.cat(
             words_embeddings
             + position_embeddings
-            + angle_embeddings
-            + distance_embeddings
+            + direct_embeddings
+            + dist_embeddings
             + segmentation_ids_embeddings
             + h_position_embeddings
             + w_position_embeddings
@@ -169,7 +169,7 @@ class LayoutLMSelfAttention(nn.Module):
         )
         if self.position_embedding_type == "relative_key" or self.position_embedding_type == "relative_key_query":
             self.max_position_embeddings = config.max_position_embeddings
-            self.distance_embedding = nn.Embedding(2 * config.max_position_embeddings - 1, self.attention_head_size)
+            self.dist_embedding = nn.Embedding(2 * config.max_position_embeddings - 1, self.attention_head_size)
 
         self.is_decoder = config.is_decoder
 
@@ -238,9 +238,9 @@ class LayoutLMSelfAttention(nn.Module):
             else:
                 position_ids_l = torch.arange(query_length, dtype=torch.long, device=hidden_states.device).view(-1, 1)
             position_ids_r = torch.arange(key_length, dtype=torch.long, device=hidden_states.device).view(1, -1)
-            distance = position_ids_l - position_ids_r
+            dist = position_ids_l - position_ids_r
 
-            positional_embedding = self.distance_embedding(distance + self.max_position_embeddings - 1)
+            positional_embedding = self.dist_embedding(dist + self.max_position_embeddings - 1)
             positional_embedding = positional_embedding.to(dtype=query_layer.dtype)  # fp16 compatibility
 
             if self.position_embedding_type == "relative_key":
@@ -761,11 +761,11 @@ class LayoutLMModel(LayoutLMPreTrainedModel):
         attention_mask: Optional[torch.FloatTensor] = None,
         token_type_ids: Optional[torch.LongTensor] = None,
         position_ids: Optional[torch.LongTensor] = None,
-        angle: Optional[torch.LongTensor] = None,
-        distance: Optional[torch.FloatTensor] = None,
+        dist: Optional[torch.FloatTensor] = None,
+        direct: Optional[torch.LongTensor] = None,
         segmentation_ids: Optional[torch.LongTensor] = None,
-        h: Optional[torch.FloatTensor] = None, 
-        w: Optional[torch.FloatTensor] = None,
+        seg_width: Optional[torch.FloatTensor] = None,
+        seg_height: Optional[torch.FloatTensor] = None, 
         head_mask: Optional[torch.FloatTensor] = None,
         inputs_embeds: Optional[torch.FloatTensor] = None,
         encoder_hidden_states: Optional[torch.FloatTensor] = None,
@@ -852,10 +852,10 @@ class LayoutLMModel(LayoutLMPreTrainedModel):
             input_ids=input_ids,
             #bbox=bbox,
             position_ids=position_ids,
-            angle=angle,
-            distance=distance,
-            h=h,
-            w=w,
+            dist=dist,
+            direct=direct,
+            seg_width=seg_width,
+            seg_height=seg_height,
             segmentation_ids=segmentation_ids,
             token_type_ids=token_type_ids,
             inputs_embeds=inputs_embeds,
@@ -918,11 +918,11 @@ class LayoutLMForMaskedLM(LayoutLMPreTrainedModel):
         attention_mask: Optional[torch.FloatTensor] = None,
         token_type_ids: Optional[torch.LongTensor] = None,
         position_ids: Optional[torch.LongTensor] = None,
-        angle: Optional[torch.LongTensor] = None,
-        distance: Optional[torch.FloatTensor] = None,
+        dist: Optional[torch.FloatTensor] = None,
+        direct: Optional[torch.LongTensor] = None,
         segmentation_ids: Optional[torch.LongTensor] = None,
-        h: Optional[torch.FloatTensor] = None, 
-        w: Optional[torch.FloatTensor] = None,
+        seg_width: Optional[torch.FloatTensor] = None,
+        seg_height: Optional[torch.FloatTensor] = None, 
         head_mask: Optional[torch.FloatTensor] = None,
         inputs_embeds: Optional[torch.FloatTensor] = None,
         labels: Optional[torch.LongTensor] = None,
@@ -985,11 +985,11 @@ class LayoutLMForMaskedLM(LayoutLMPreTrainedModel):
             attention_mask=attention_mask,
             token_type_ids=token_type_ids,
             position_ids=position_ids,
-            angle=angle,
-            distance=distance,
+            dist=dist,
+            direct=direct,
             segmentation_ids=segmentation_ids,
-            h=h,
-            w=w,
+            seg_width=seg_width,
+            seg_height=seg_height,
             head_mask=head_mask,
             inputs_embeds=inputs_embeds,
             encoder_hidden_states=encoder_hidden_states,
