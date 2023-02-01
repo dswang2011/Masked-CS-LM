@@ -1,95 +1,66 @@
 
 import torch
 
+import os
+import argparse
+from torch.utils.data import DataLoader
 
-tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-model = BertForMaskedLM.from_pretrained(opt.bert_path)
-
-texts = ["test some text for language model.", "another test example for it"]
-
-inputs = tokenizer(texts, return_tensors='pt', max_length=512, truncation=True, padding='max_length')
-
-inputs['labels'] = inputs.input_ids.detach.clone()
-
-
-# Now we mask tokens in the input_ids tensor, using the 15% probability we used before - 
-# and the not a CLS (101) or SEP (102) token condition, and PAD tokens (0 input ids).
-
-# create random array of floats with equal dimensions to input_ids tensor
+import torch
+import pickle
+from utils.params import Params
+# from torch_geometric.transforms import NormalizeFeatures
+import pretrain_dataset
+from LMs import trainer
 
 
-def masked_inputs(batch_encodings):
-    rand_mat = torch.rand(batch_encodings.input_ids.shape)
-    # create mask array
-    threshold = (rand_mat < 0.50)
-    cnt = 0
-    while torch.all(threshold[:,:192]):
-        rand_mat = torch.rand(batch_encodings.input_ids.shape)
-        threshold = (rand_mat < 0.50)
-        cnt+=1
-        if cnt>10: break
-        
-    mask_arr = threshold * (inputs.input_ids != 101) * \
-            (batch_encodings.input_ids != 102) * (inputs.input_ids != 0)
+def parse_args(config_path):
+    parser = argparse.ArgumentParser(description='run the model')
+    parser.add_argument('--config', dest='config_file', default = config_path)
+    return parser.parse_args()
+    
+if __name__=='__main__':
+
+    # Section 1, parse parameters
+    args = parse_args('config/lm.ini') # from config file
+    params = Params()   # put to param object
+    params.parse_config(args.config_file)
+    params.config_file = args.config_file
+
+    params.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+    print('Using device:', params.device)
+
+    # section 2, load data; prepare output_dim/num_labels, id2label, label2id for section3; 
+    mydata = pretrain_dataset.setup(params)
+    
+    # section 3, objective function and output dim/ move to trainer
+    params.criterion = util_trainer.get_criterion(params)
+
+    # section 4, model, loss function, and optimizer
+    if bool(params.continue_train):
+        print('continue based on:', params.continue_with_model)
+        model_params = pickle.load(open(os.path.join(params.continue_with_model,'config.pkl'),'rb'))
+        model = LMs.setup(model_params).to(params.device)
+        model.load_state_dict(torch.load(os.path.join(params.continue_with_model,'model')))
+    else:
+        model = LMs.setup(params).to(params.device)
 
 
-    # now we take the indices of each True value, for each vector.
-    selection = []  # positions that are masked
-    for i in range(batch_encodings.input_ids.shape[0]):
-        select = torch.flatten(mask_arr[i].nonzero()).tolist()
-        select = [item for item in select if item < 192]
-        selection.append(selection)
+    # section 5, train and evaluate, train each 10000 for each part;
+    # 5.1 save to folder
+    # params.dir_path = trainer.create_save_dir(params)    # prepare dir for saving best models
 
+    # best_f1 = trainer.train(params, model, mydata)
+    # inferencer.inference(params,model,mydata,'v3_base_benchmark_Jan26_'+str(params.start_chunk) +'.json')
 
-    # Step2: Apply these indices to each respective row in input_ids, assigning [MASK] positions as 103.
-    for i in range(batch_encodings.input_ids.shape[0]):
-        batch_encodings.input_ids[i, selection[i]] = 103
+    # for chunk in range(2,params.train_part+1):
+    #     mydata.adjust(chunk)
+    #     best_f1,best_loss = trainer.train(params, model, mydata)
+    #     inferencer.inference(params,model,mydata,'v3_base_benchmark_Jan26_'+str(chunk)+'.json')
 
-    return selection, inputs
+    #     print('best f1:', best_f1)
+    #     print('best loss:', best_loss)
 
+    # section 6, inference only (on test_dataset)
+    # inferencer.inference(params,model,mydata,'v3_base_benchmark_Jan_1pm.json')
 
-
-class MyDataset(torch.utils.data.Dataset):
-    def __init__(self, encodings):
-        self.encodings = encodings
-    def __getitem__(self, idx):
-        return {key: torch.tensor(val[idx]) for key, val in self.encodings.items()}
-    def __len__(self):
-        return len(self.encodings.input_ids)
-
-
-dataset = MyDataset(inputs)
-
-
-loader = torch.utils.data.DataLoader(dataset, batch_size=16, shuffle=True)
-
-
-
-
-from tqdm import tqdm  # for our progress bar
-
-epochs = 2
-
-for epoch in range(epochs):
-    # setup loop with TQDM and dataloader
-    loop = tqdm(loader, leave=True)
-    for batch in loop:
-        # initialize calculated gradients (from prev step)
-        optim.zero_grad()
-        # pull all tensor batches required for training
-        input_ids = batch['input_ids'].to(device)
-        attention_mask = batch['attention_mask'].to(device)
-        labels = batch['labels'].to(device)
-        # process
-        outputs = model(input_ids, attention_mask=attention_mask,
-                        labels=labels)
-        # extract loss
-        loss = outputs.loss
-        # calculate loss for every parameter that needs grad update
-        loss.backward()
-        # update parameters
-        optim.step()
-        # print relevant info to progress bar
-        loop.set_description(f'Epoch {epoch}')
-        loop.set_postfix(loss=loss.item())
 
