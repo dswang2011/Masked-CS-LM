@@ -93,8 +93,8 @@ class LayoutLMEmbeddings(nn.Module):
         if position_ids is None:
             position_ids = self.position_ids[:, :seq_length]
 
-        if token_type_ids is None:
-            token_type_ids = torch.zeros(input_shape, dtype=torch.long, device=device)
+        #if token_type_ids is None:
+        #    token_type_ids = torch.zeros(input_shape, dtype=torch.long, device=device)
 
         if inputs_embeds is None:
             inputs_embeds = self.word_embeddings(input_ids)
@@ -759,7 +759,7 @@ class LayoutLMModel(LayoutLMPreTrainedModel):
         input_ids: Optional[torch.LongTensor] = None,
         #bbox: Optional[torch.LongTensor] = None,
         attention_mask: Optional[torch.FloatTensor] = None,
-        token_type_ids: Optional[torch.LongTensor] = None,
+        #token_type_ids: Optional[torch.LongTensor] = None,
         position_ids: Optional[torch.LongTensor] = None,
         dist: Optional[torch.FloatTensor] = None,
         direct: Optional[torch.LongTensor] = None,
@@ -827,8 +827,8 @@ class LayoutLMModel(LayoutLMPreTrainedModel):
 
         if attention_mask is None:
             attention_mask = torch.ones(input_shape, device=device)
-        if token_type_ids is None:
-            token_type_ids = torch.zeros(input_shape, dtype=torch.long, device=device)
+        #if token_type_ids is None:
+        #    token_type_ids = torch.zeros(input_shape, dtype=torch.long, device=device)
 
         extended_attention_mask = attention_mask.unsqueeze(1).unsqueeze(2)
 
@@ -854,7 +854,7 @@ class LayoutLMModel(LayoutLMPreTrainedModel):
             seg_width=seg_width,
             seg_height=seg_height,
             segmentation_ids=segmentation_ids,
-            token_type_ids=token_type_ids,
+            #token_type_ids=token_type_ids,
             inputs_embeds=inputs_embeds,
         )
         encoder_outputs = self.encoder(
@@ -913,7 +913,7 @@ class LayoutLMForMaskedLM(LayoutLMPreTrainedModel):
         input_ids: Optional[torch.LongTensor] = None,
         #bbox: Optional[torch.LongTensor] = None,
         attention_mask: Optional[torch.FloatTensor] = None,
-        token_type_ids: Optional[torch.LongTensor] = None,
+        #token_type_ids: Optional[torch.LongTensor] = None,
         position_ids: Optional[torch.LongTensor] = None,
         dist: Optional[torch.FloatTensor] = None,
         direct: Optional[torch.LongTensor] = None,
@@ -980,7 +980,7 @@ class LayoutLMForMaskedLM(LayoutLMPreTrainedModel):
             input_ids,
             #bbox,
             attention_mask=attention_mask,
-            token_type_ids=token_type_ids,
+            #token_type_ids=token_type_ids,
             position_ids=position_ids,
             dist=dist,
             direct=direct,
