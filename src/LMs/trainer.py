@@ -14,10 +14,10 @@ metric = load_metric("seqeval")
 
 def train(opt, model, mydata):
     # 1 data loader
-    loader_train = DataLoader(mydata.train_dataset, batch_size=opt.batch_size,shuffle=True)
-    loader_test = DataLoader(mydata.test_dataset, batch_size=opt.batch_size)
+    loader_train = DataLoader(mydata.masked_train_dataset, batch_size=opt.batch_size,shuffle=True)
+    # loader_test = DataLoader(mydata.test_dataset, batch_size=opt.batch_size)
 
-    print(loader_train, loader_test)
+    print(loader_train)
 
     # 2 optimizer
     optimizer = torch.optim.AdamW(model.parameters(),lr=opt.lr, betas=(0.9,0.999),eps=1e-08)
@@ -48,11 +48,11 @@ def train(opt, model, mydata):
             print('The best model saved with loss:', best_loss, ' to ', opt.dir_path)
             continue
         # if task_type == classification
-        res_dict = test_eval(opt,model,loader_test)
-        if res_dict['f1']>best_f1:
-            save_model(opt, model,res_dict)
-            best_f1 = res_dict['f1']
-            print('The best model saved with f1:', best_f1,' to ', opt.dir_path)
+        # res_dict = test_eval(opt,model,loader_test)
+        # if res_dict['f1']>best_f1:
+        #     save_model(opt, model,res_dict)
+        #     best_f1 = res_dict['f1']
+        #     print('The best model saved with f1:', best_f1,' to ', opt.dir_path)
     return best_f1
 
 
@@ -73,7 +73,15 @@ def test_eval(opt,model,loader_test):
 
 # for backpropagation use, so define the input variables
 def predict_one_batch(opt, model, batch, eval=False):
-    if opt.task_type == 'token-classifier':
+    if opt.task_type == 'cspretrain':
+        input_ids = batch['input_ids'].to(opt.device)
+        attention_mask = batch['attention_mask'].to(opt.device)
+        bbox = batch['bbox'].to(opt.device)
+        labels = batch['labels'].to(opt.device)
+        pixel_values = batch['pixel_values'].to(opt.device)
+        gvect = batch['gvect'].to(opt.device)
+
+    elif opt.task_type == 'token-classifier':
         input_ids = batch['input_ids'].to(opt.device)
         attention_mask = batch['attention_mask'].to(opt.device)
         bbox = batch['bbox'].to(opt.device)

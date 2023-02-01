@@ -3,7 +3,7 @@
 from LMs.LayoutLM import LayoutLMTokenclassifier
 from LMs.LayoutLM import LayoutLM4DocVQA
 from LMs.Roberta import GraphRobertaTokenClassifier, RobertaTokenClassifier
-
+from LMs.CSModel import CSModel
 
 def setup(opt):
     print('network:' + opt.network_type)
@@ -18,6 +18,8 @@ def setup(opt):
         model = GraphRobertaTokenClassifier(opt)
     elif opt.network_type == 'roberta':
         model = RobertaTokenClassifier(opt)
+    elif opt.network_type == 'csmodel':
+        model = CSModel(opt)
     else:
         raise Exception('model not supported:{}'.format(opt.network_type))
 

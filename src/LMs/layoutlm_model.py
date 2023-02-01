@@ -18,7 +18,7 @@ from transformers.modeling_outputs import (
 from transformers import PreTrainedModel
 from transformers.pytorch_utils import apply_chunking_to_forward, find_pruneable_heads_and_indices, prune_linear_layer
 from transformers.utils import add_start_docstrings, add_start_docstrings_to_model_forward, logging, replace_return_docstrings
-from configuration_CSModel import CSModelConfig
+from LMs.configuration_CSModel import CSModelConfig
 
 logger = logging.get_logger(__name__)
 

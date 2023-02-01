@@ -63,6 +63,8 @@ if __name__=="__main__":
 
     subsets = list(split(files, 20))
     for i,subset in enumerate(subsets):
+        if i == 0: continue
+        
         print(len(subset))
         saveto = generate_and_save(i,subset)
         # print('saved to:', saveto)

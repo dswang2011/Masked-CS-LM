@@ -11,7 +11,7 @@ from utils.params import Params
 # from torch_geometric.transforms import NormalizeFeatures
 import pretrain_dataset
 from LMs import trainer
-
+import LMs
 
 def parse_args(config_path):
     parser = argparse.ArgumentParser(description='run the model')
@@ -31,9 +31,10 @@ if __name__=='__main__':
 
     # section 2, load data; prepare output_dim/num_labels, id2label, label2id for section3; 
     mydata = pretrain_dataset.setup(params)
+    print(mydata.masked_train_dataset)
     
     # section 3, objective function and output dim/ move to trainer
-    params.criterion = util_trainer.get_criterion(params)
+    # this is usually covered by huggingface models
 
     # section 4, model, loss function, and optimizer
     if bool(params.continue_train):
@@ -49,7 +50,7 @@ if __name__=='__main__':
     # 5.1 save to folder
     # params.dir_path = trainer.create_save_dir(params)    # prepare dir for saving best models
 
-    # best_f1 = trainer.train(params, model, mydata)
+    best_f1 = trainer.train(params, model, mydata)
     # inferencer.inference(params,model,mydata,'v3_base_benchmark_Jan26_'+str(params.start_chunk) +'.json')
 
     # for chunk in range(2,params.train_part+1):
