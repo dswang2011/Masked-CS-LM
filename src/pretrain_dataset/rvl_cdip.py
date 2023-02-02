@@ -1,6 +1,6 @@
 from datasets import load_from_disk, Features, Sequence, Value
 
-from transformers import RobertaTokenizer
+from transformers import LayoutLMTokenizer
 import torch
 
 
@@ -18,7 +18,7 @@ class RVLCDIP:
         self.opt = opt
         
         # tokenizer
-        self.tokenizer = RobertaTokenizer.from_pretrained(opt.roberta_dir)
+        self.tokenizer = LayoutLMTokenizer.from_pretrained(opt.layoutlm_large)
 
         # get dataset from saved hf;
         self.train_dataset = self.get_data(opt.rvl_cdip).with_format("torch")

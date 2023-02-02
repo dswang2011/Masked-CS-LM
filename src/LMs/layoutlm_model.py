@@ -93,9 +93,12 @@ class LayoutLMEmbeddings(nn.Module):
 
         if position_ids is None:
             position_ids = self.position_ids[:, :seq_length]
+        # position_ids = torch.tensor([[pos for pos in range(512)] for _ in range(batch_size)], device=device)
 
         #if token_type_ids is None:
         #    token_type_ids = torch.zeros(input_shape, dtype=torch.long, device=device)
+
+        segmentation_ids = torch.tensor([[0,1,2,3,4,5,6,7,8] for _ in range(len(input_ids))], device=device)
 
         if inputs_embeds is None:
             inputs_embeds = self.word_embeddings(input_ids)
@@ -112,7 +115,15 @@ class LayoutLMEmbeddings(nn.Module):
         w_position_embeddings = self.w_position_embeddings(self._tensor_expand(seg_width))
 
         # NOTICE: the way to calculate embeddings is changed correspondingly
-        embeddings = torch.cat(
+        # print('word',words_embeddings.shape)
+        # print('pos',position_embeddings.shape)
+        # print('direct',direct_embeddings.shape)
+        # print('dist', dist_embeddings.shape)
+        # print('seg',segmentation_ids_embeddings.shape)
+        # print('h',h_position_embeddings.shape)
+        # print('w',w_position_embeddings.shape)
+
+        embeddings = (
             words_embeddings
             + position_embeddings
             + direct_embeddings
