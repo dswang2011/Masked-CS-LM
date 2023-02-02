@@ -64,9 +64,9 @@ class LayoutLMEmbeddings(nn.Module):
     def _tensor_expand(self, input_tensor, center_size=192, other_size=40):
         row = input_tensor.size(dim=0)
         col = input_tensor.size(dim=1)
-        expanded_tensor_list = [input_tensor[:,0].reshape(col ,1).repeat(1, center_size)]
+        expanded_tensor_list = [input_tensor[:,0].reshape(row, 1).repeat(1, center_size)]
         for i in range(1, col):
-            expanded_tensor_list.append(input_tensor[:,i].reshape(col ,1).repeat(1, other_size))
+            expanded_tensor_list.append(input_tensor[:,i].reshape(row, 1).repeat(1, other_size))
         return torch.cat(expanded_tensor_list)
 
     def forward(
