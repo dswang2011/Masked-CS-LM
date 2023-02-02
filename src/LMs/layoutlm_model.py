@@ -102,32 +102,37 @@ class LayoutLMEmbeddings(nn.Module):
         words_embeddings = inputs_embeds
         position_embeddings = self.position_embeddings(position_ids)
 
-        direct_embeddings_list = [self.direct_embeddings_center(direct[0])]
+        print('direct: ', direct[:, :1])
+        print('dist: ', dist[:, :0]) #=========
+        # direct = direct[:,0].expand(len(direct),192)
+        print(direct)
+        direct_embeddings_list = [self.direct_embeddings_center(direct[:, 0])]
         for i in range(self.number_of_compoents):
-            direct_embeddings_list.append(self.direct_embeddings_others(direct[i+1]))
-        direct_embeddings = torch.cat(direct_embeddings_list)
+            direct_embeddings_list.append(self.direct_embeddings_others(direct[:, i+1]))
+        print('direct_embed:',direct_embeddings_list)
+        direct_embeddings = torch.cat(direct_embeddings_list, dim=-1)
 
-        dist_embeddings_list = [self.dist_embeddings_center(dist[0])]
+        dist_embeddings_list = [self.dist_embeddings_center(dist[:, 0])]
         for i in range(self.number_of_compoents):
-            dist_embeddings_list.append(self.dist_embeddings_others(dist[i+1]))
-        dist_embeddings = torch.cat(dist_embeddings_list)
+            dist_embeddings_list.append(self.dist_embeddings_others(dist[:, i+1]))
+        dist_embeddings = torch.cat(dist_embeddings_list, dim=-1)
 
         if not segmentation_ids:
             segmentation_ids = torch.Tensor([i for i in range(9)])
-        segmentation_ids_embeddings_list = [self.segmentation_ids_embeddings_center(segmentation_ids[0])]
+        segmentation_ids_embeddings_list = [self.segmentation_ids_embeddings_center(segmentation_ids[:, 0])]
         for i in range(self.number_of_compoents):
-            segmentation_ids_embeddings_list.append(self.segmentation_ids_embeddings_others(segmentation_ids[i+1]))
-        segmentation_ids_embeddings = torch.cat(segmentation_ids_embeddings_list)
+            segmentation_ids_embeddings_list.append(self.segmentation_ids_embeddings_others(segmentation_ids[:, i+1]))
+        segmentation_ids_embeddings = torch.cat(segmentation_ids_embeddings_list, dim=-1)
 
-        h_position_embeddings_list = [self.h_position_embeddings_center(seg_height[0])]
+        h_position_embeddings_list = [self.h_position_embeddings_center(seg_height[:, 0])]
         for i in range(self.number_of_compoents):
-            h_position_embeddings_list.append(self.h_position_embeddings_others(seg_height[i+1]))
-        h_position_embeddings = torch.cat(h_position_embeddings_list)
+            h_position_embeddings_list.append(self.h_position_embeddings_others(seg_height[:, i+1]))
+        h_position_embeddings = torch.cat(h_position_embeddings_list, dim=-1)
         
-        w_position_embeddings_list = [self.w_position_embeddings_center(seg_width[0])]
+        w_position_embeddings_list = [self.w_position_embeddings_center(seg_width[:, 0])]
         for i in range(self.number_of_compoents):
-            w_position_embeddings_list.append(self.w_position_embeddings_others(seg_width[i+1]))
-        w_position_embeddings = torch.cat(w_position_embeddings_list)
+            w_position_embeddings_list.append(self.w_position_embeddings_others(seg_width[:, i+1]))
+        w_position_embeddings = torch.cat(w_position_embeddings_list, dim=-1)
 
         # NOTICE: the way to calculate embeddings is changed correspondingly
         embeddings = torch.cat(

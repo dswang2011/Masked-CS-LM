@@ -2,10 +2,14 @@ import torch
 from transformers import RobertaTokenizer,RobertaForMaskedLM
 import cs_util
 
-from tokenization_layoutlm import LayoutLMTokenizer
+from transformers import LayoutLMTokenizer
+from transformers import AutoTokenizer
 
-tokenizer = RobertaTokenizer.from_pretrained('/home/ubuntu/resources/roberta.base.squad')
-# tokenizer = LayoutLMTokenizer.from_pretrained('/home/ubuntu/resources/roberta.base.squad')
+# tokenizer = RobertaTokenizer.from_pretrained('/home/ubuntu/resources/roberta.base.squad')
+# tokenizer = LayoutLMTokenizer.from_pretrained('/home/ubuntu/air/vrdu/models/layoutlmv1.large')
+tokenizer = LayoutLMTokenizer.from_pretrained("/home/ubuntu/air/vrdu/models/layoutlmv1.large")
+# tf_tokenizer = TFBertTokenizer.from_tokenizer(tokenizer)
+
 
 def _empty_s_encod():
     '''

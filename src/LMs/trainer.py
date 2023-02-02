@@ -76,10 +76,21 @@ def predict_one_batch(opt, model, batch, eval=False):
     if opt.task_type == 'cspretrain':
         input_ids = batch['input_ids'].to(opt.device)
         attention_mask = batch['attention_mask'].to(opt.device)
-        bbox = batch['bbox'].to(opt.device)
+        dist = batch['dist'].to(opt.device)
+        direct = batch['direct'].to(opt.device)
+        seg_width = batch['seg_width'].to(opt.device)
+        seg_height = batch['seg_height'].to(opt.device)
         labels = batch['labels'].to(opt.device)
-        pixel_values = batch['pixel_values'].to(opt.device)
-        gvect = batch['gvect'].to(opt.device)
+
+        if eval:
+            with torch.no_grad():
+                outputs = model(
+                    input_ids = input_ids, attention_mask = attention_mask, dist = dist, 
+            direct = direct, seg_width=seg_width, seg_height=seg_height, labels = labels)  
+        else:
+            outputs = model(
+                input_ids = input_ids, attention_mask = attention_mask, dist = dist, 
+            direct = direct, seg_width=seg_width, seg_height=seg_height, labels = labels)
 
     elif opt.task_type == 'token-classifier':
         input_ids = batch['input_ids'].to(opt.device)
