@@ -46,7 +46,7 @@ class LayoutLMEmbeddings(nn.Module):
 
         # NOTICE: we add direct and dist as input to model the relative positions
         # so direct and dist embeddings are added correspondingly
-        self.direct_embeddings= nn.Embedding(config.max_2d_position_embeddings, config.hidden_size)
+        self.direct_embeddings = nn.Embedding(config.max_2d_position_embeddings, config.hidden_size)
         self.dist_embeddings = nn.Embedding(config.max_2d_position_embeddings, config.hidden_size)
 
         # NOTICE: add segmentation id embeddings
@@ -741,7 +741,7 @@ class LayoutLMModel(LayoutLMPreTrainedModel):
         attention_mask: Optional[torch.FloatTensor] = None,
         #token_type_ids: Optional[torch.LongTensor] = None,
         position_ids: Optional[torch.LongTensor] = None,
-        dist: Optional[torch.FloatTensor] = None,
+        dist: Optional[torch.LongTensor] = None,
         direct: Optional[torch.LongTensor] = None,
         segmentation_ids: Optional[torch.LongTensor] = None,
         seg_width: Optional[torch.FloatTensor] = None,
@@ -895,7 +895,7 @@ class LayoutLMForMaskedLM(LayoutLMPreTrainedModel):
         attention_mask: Optional[torch.FloatTensor] = None,
         #token_type_ids: Optional[torch.LongTensor] = None,
         position_ids: Optional[torch.LongTensor] = None,
-        dist: Optional[torch.FloatTensor] = None,
+        dist: Optional[torch.LongTensor] = None,
         direct: Optional[torch.LongTensor] = None,
         segmentation_ids: Optional[torch.LongTensor] = None,
         seg_width: Optional[torch.FloatTensor] = None,
