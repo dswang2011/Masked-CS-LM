@@ -91,13 +91,13 @@ def _rule_polar(rect_src : list, rect_dst : list) -> Tuple[int, int]:
         a, b = (rect_dst[0] - rect_src[2]), (rect_dst[3] - rect_src[1])
         return int(sqrt(a**2 + b**2)), 2
     elif left:
-        return (rect_src[0] - rect_dst[2]), 5
+        return int(rect_src[0] - rect_dst[2]), 5
     elif right:
-        return (rect_dst[0] - rect_src[2]), 1
+        return int(rect_dst[0] - rect_src[2]), 1
     elif bottom:
-        return (rect_dst[1] - rect_src[3]), 7
+        return int(rect_dst[1] - rect_src[3]), 7
     elif top:
-        return (rect_src[1] - rect_dst[3]), 3
+        return int(rect_src[1] - rect_dst[3]), 3
 
 
 def _fully_connected_matrix(bboxs):

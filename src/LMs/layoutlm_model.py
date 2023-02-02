@@ -87,6 +87,7 @@ class LayoutLMEmbeddings(nn.Module):
             input_shape = inputs_embeds.size()[:-1]
 
         seq_length = input_shape[1]
+        batch_size = input_shape[0]
 
         device = input_ids.device if input_ids is not None else inputs_embeds.device
 
@@ -104,6 +105,7 @@ class LayoutLMEmbeddings(nn.Module):
 
         direct_embeddings = self.direct_embeddings(self._tensor_expand(direct))
         dist_embeddings = self.dist_embeddings(self._tensor_expand(dist))
+
         segmentation_ids_embeddings = self.segmentation_ids_embeddings(self._tensor_expand(segmentation_ids))
 
         h_position_embeddings = self.h_position_embeddings(self._tensor_expand(seg_height))

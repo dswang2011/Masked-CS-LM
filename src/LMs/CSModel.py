@@ -22,9 +22,9 @@ class CSModel(nn.Module):
                 param.requires_grad = False
         
 
-    def forward(self,input_ids, attention_mask, dist, direct, seg_width,seg_height,labels, **args):
+    def forward(self,input_ids, attention_mask, dist, direct, seg_width,seg_height,segmentation_ids,labels, **args):
         outputs = self.csmodel(input_ids = input_ids, attention_mask = attention_mask, dist = dist, 
-            direct = direct, seg_width=seg_width, seg_height=seg_height, labels = labels)
+            direct = direct, seg_width=seg_width, seg_height=seg_height, segmentation_ids=segmentation_ids, labels = labels)
         # outputs = self.layoutlm(input_ids = input_ids, bbox = None, attention_mask = attention_mask, pixel_values = None, labels = labels)
         return outputs
 

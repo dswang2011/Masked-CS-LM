@@ -81,16 +81,20 @@ def predict_one_batch(opt, model, batch, eval=False):
         seg_width = batch['seg_width'].to(opt.device)
         seg_height = batch['seg_height'].to(opt.device)
         labels = batch['labels'].to(opt.device)
+        segmentation_ids = torch.tensor([[0,1,2,3,4,5,6,7,8] for _ in range(len(input_ids))])
+        segmentation_ids.to(opt.device)
 
         if eval:
             with torch.no_grad():
                 outputs = model(
                     input_ids = input_ids, attention_mask = attention_mask, dist = dist, 
-            direct = direct, seg_width=seg_width, seg_height=seg_height, labels = labels)  
+            direct = direct, seg_width=seg_width, seg_height=seg_height, 
+            segmentation_ids=segmentation_ids, labels = labels)  
         else:
             outputs = model(
                 input_ids = input_ids, attention_mask = attention_mask, dist = dist, 
-            direct = direct, seg_width=seg_width, seg_height=seg_height, labels = labels)
+            direct = direct, seg_width=seg_width, seg_height=seg_height, 
+            segmentation_ids=segmentation_ids, labels = labels)
 
     elif opt.task_type == 'token-classifier':
         input_ids = batch['input_ids'].to(opt.device)

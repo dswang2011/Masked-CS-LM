@@ -72,7 +72,7 @@ def get_relative_info(boxes,neibors, token_nums):
                 s_h.append(1000)
             else:
                 dist, direct, neib_idx = neib[direct]
-                nw,nh = boxes[neib_idx][2]-boxes[neib_idx][0], boxes[neib_idx][3]-boxes[neib_idx][1]
+                nw,nh = int(boxes[neib_idx][2]-boxes[neib_idx][0]), int(boxes[neib_idx][3]-boxes[neib_idx][1])
                 s_w.append(nw)
                 s_h.append(nh)
         seg_widths.append(s_w)
