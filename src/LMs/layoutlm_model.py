@@ -62,8 +62,8 @@ class LayoutLMEmbeddings(nn.Module):
 
 
     def _tensor_expand(self, input_tensor, center_size=192, other_size=40):
-        row = input_tensor.size(dim=-1)
-        col = input_tensor.size(dim=1)
+        row = input_tensor.size()[0]
+        col = input_tensor.size()[1]
         expanded_tensor_list = [input_tensor[:,0].reshape(row, 1).repeat(1, center_size)]
         for i in range(1, col):
             expanded_tensor_list.append(input_tensor[:,i].reshape(row, 1).repeat(1, other_size))
