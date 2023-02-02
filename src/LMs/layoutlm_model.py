@@ -46,28 +46,28 @@ class LayoutLMEmbeddings(nn.Module):
 
         # NOTICE: we add direct and dist as input to model the relative positions
         # so direct and dist embeddings are added correspondingly
-        self.direct_embeddings_center = nn.Embedding(config.max_2d_position_embeddings, 192)
-        self.direct_embeddings_others = nn.Embedding(config.max_2d_position_embeddings, 40)
-
-        self.dist_embeddings_center = nn.Embedding(config.max_2d_position_embeddings, 192)
-        self.dist_embeddings_others = nn.Embedding(config.max_2d_position_embeddings, 40)
+        self.direct_embeddings= nn.Embedding(config.max_2d_position_embeddings, config.hidden_size)
+        self.dist_embeddings = nn.Embedding(config.max_2d_position_embeddings, config.hidden_size)
 
         # NOTICE: add segmentation id embeddings
         # the config can be reused max_position_embeddings is set to be 512
-        self.segmentation_ids_embeddings_center = nn.Embedding(config.max_2d_position_embeddings, 192)
-        self.segmentation_ids_embeddings_others = nn.Embedding(config.max_2d_position_embeddings, 40)
-
-        self.h_position_embeddings_center = nn.Embedding(config.max_2d_position_embeddings, 192)
-        self.h_position_embeddings_others = nn.Embedding(config.max_2d_position_embeddings, 40)
-        self.w_position_embeddings_center = nn.Embedding(config.max_2d_position_embeddings, 192)
-        self.w_position_embeddings_others = nn.Embedding(config.max_2d_position_embeddings, 40)
-        # self.token_type_embeddings = nn.Embedding(config.type_vocab_size, config.hidden_size)
+        self.segmentation_ids_embeddings = nn.Embedding(config.max_2d_position_embeddings, config.hidden_size)
+        self.h_position_embeddings = nn.Embedding(config.max_2d_position_embeddings, config.hidden_size)
+        self.w_position_embeddings = nn.Embedding(config.max_2d_position_embeddings, config.hidden_size)
 
         self.LayerNorm = LayoutLMLayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
         self.register_buffer("position_ids", torch.arange(config.max_position_embeddings).expand((1, -1)))
 
+
+    def _tensor_expand(self, input_tensor, center_size=192, other_size=40):
+        row = input_tensor.size(dim=0)
+        col = input_tensor.size(dim=1)
+        expanded_tensor_list = [input_tensor[:,0].reshape(col ,1).repeat(1, center_size)]
+        for i in range(1, col):
+            expanded_tensor_list.append(input_tensor[:,i].reshape(col ,1).repeat(1, other_size))
+        return torch.cat(expanded_tensor_list)
 
     def forward(
         self,
@@ -102,37 +102,12 @@ class LayoutLMEmbeddings(nn.Module):
         words_embeddings = inputs_embeds
         position_embeddings = self.position_embeddings(position_ids)
 
-        print('direct: ', direct[:, :1])
-        print('dist: ', dist[:, :0]) #=========
-        # direct = direct[:,0].expand(len(direct),192)
-        print(direct)
-        direct_embeddings_list = [self.direct_embeddings_center(direct[:, 0])]
-        for i in range(self.number_of_compoents):
-            direct_embeddings_list.append(self.direct_embeddings_others(direct[:, i+1]))
-        print('direct_embed:',direct_embeddings_list)
-        direct_embeddings = torch.cat(direct_embeddings_list, dim=-1)
+        direct_embeddings = self.direct_embeddings(self._tensor_expand(direct))
+        dist_embeddings = self.dist_embeddings(self._tensor_expand(dist))
+        segmentation_ids_embeddings = self.segmentation_ids_embeddings(self._tensor_expand(segmentation_ids))
 
-        dist_embeddings_list = [self.dist_embeddings_center(dist[:, 0])]
-        for i in range(self.number_of_compoents):
-            dist_embeddings_list.append(self.dist_embeddings_others(dist[:, i+1]))
-        dist_embeddings = torch.cat(dist_embeddings_list, dim=-1)
-
-        if not segmentation_ids:
-            segmentation_ids = torch.Tensor([i for i in range(9)])
-        segmentation_ids_embeddings_list = [self.segmentation_ids_embeddings_center(segmentation_ids[:, 0])]
-        for i in range(self.number_of_compoents):
-            segmentation_ids_embeddings_list.append(self.segmentation_ids_embeddings_others(segmentation_ids[:, i+1]))
-        segmentation_ids_embeddings = torch.cat(segmentation_ids_embeddings_list, dim=-1)
-
-        h_position_embeddings_list = [self.h_position_embeddings_center(seg_height[:, 0])]
-        for i in range(self.number_of_compoents):
-            h_position_embeddings_list.append(self.h_position_embeddings_others(seg_height[:, i+1]))
-        h_position_embeddings = torch.cat(h_position_embeddings_list, dim=-1)
-        
-        w_position_embeddings_list = [self.w_position_embeddings_center(seg_width[:, 0])]
-        for i in range(self.number_of_compoents):
-            w_position_embeddings_list.append(self.w_position_embeddings_others(seg_width[:, i+1]))
-        w_position_embeddings = torch.cat(w_position_embeddings_list, dim=-1)
+        h_position_embeddings = self.h_position_embeddings(self._tensor_expand(seg_height))
+        w_position_embeddings = self.w_position_embeddings(self._tensor_expand(seg_width))
 
         # NOTICE: the way to calculate embeddings is changed correspondingly
         embeddings = torch.cat(
