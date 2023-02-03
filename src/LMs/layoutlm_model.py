@@ -91,9 +91,9 @@ class LayoutLMEmbeddings(nn.Module):
 
         device = input_ids.device if input_ids is not None else inputs_embeds.device
 
-        # if position_ids is None:
-        #     position_ids = self.position_ids[:, :seq_length]
-        position_ids = torch.tensor([[pos for pos in range(512)] for _ in range(batch_size)], device=device)
+        if position_ids is None:
+            position_ids = self.position_ids[:, :seq_length]
+        # position_ids = torch.tensor([[pos for pos in range(512)] for _ in range(batch_size)], device=device)
 
         #if token_type_ids is None:
         #    token_type_ids = torch.zeros(input_shape, dtype=torch.long, device=device)
@@ -1008,8 +1008,6 @@ class LayoutLMForMaskedLM(LayoutLMPreTrainedModel):
         masked_lm_loss = None
         if labels is not None:
             loss_fct = CrossEntropyLoss()
-            print('preduct: ', prediction_scores.size())
-            print('labels:  ', labels.size())
             masked_lm_loss = loss_fct(
                 prediction_scores.view(-1, self.config.vocab_size),
                 labels.view(-1),
