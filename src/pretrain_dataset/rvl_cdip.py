@@ -1,6 +1,6 @@
 from datasets import load_from_disk, Features, Sequence, Value
 
-from transformers import LayoutLMTokenizer
+from transformers import LayoutLMTokenizer,AutoTokenizer
 import torch
 
 
@@ -18,7 +18,7 @@ class RVLCDIP:
         self.opt = opt
         
         # tokenizer
-        self.tokenizer = LayoutLMTokenizer.from_pretrained(opt.layoutlm_large)
+        self.tokenizer = AutoTokenizer.from_pretrained(opt.layoutlm_large)
 
         # get dataset from saved hf;
         self.train_dataset = self.get_data(opt.rvl_cdip).with_format("torch")
@@ -36,7 +36,7 @@ class RVLCDIP:
 
 
     # get labels as well;
-    def masked_inputs(self,dataset, mask_ratio=0.20):
+    def masked_inputs(self,dataset):
         '''
         return: selections, batch_inputs
         '''
@@ -54,7 +54,7 @@ class RVLCDIP:
             # step1: random a (batch_size, sequence_num) 
             rand_mat = torch.rand(len(batch['input_ids']),512)
             # create mask array
-            threshold = (rand_mat < mask_ratio)
+            threshold = (rand_mat < self.opt.mask_ratio)
             mask_arr = threshold * (batch['input_ids'] != cls_id) * \
                 (batch['input_ids'] != sep_id) * (batch['input_ids'] != pad_id) * (att_mask!=0)
             # now we take the indices of each True value, for each vector.

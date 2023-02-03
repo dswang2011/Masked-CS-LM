@@ -4,7 +4,7 @@ import torch.nn as nn
 
 # from transformers import RobertaModel, RobertaConfig
 from transformers import LayoutLMForTokenClassification, AutoModelForTokenClassification
-from transformers import AutoModelForQuestionAnswering
+from transformers import AutoModelForQuestionAnswering, AutoConfig
 from LMs.layoutlm_model import LayoutLMModel, LayoutLMForMaskedLM
 
 

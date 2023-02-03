@@ -41,7 +41,7 @@ def train(opt, model, mydata):
             optimizer.step()  # Update parameters based on gradients.
         
         # eval mode
-        if opt.task_type=='docvqa':
+        if opt.task_type in ['docvqa','cspretrain']:
             # if loss.item()<best_loss:
             best_loss=loss.item()
             save_model(opt, model,{'loss':best_loss})

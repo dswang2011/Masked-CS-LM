@@ -41,19 +41,20 @@ class LayoutLMEmbeddings(nn.Module):
         super(LayoutLMEmbeddings, self).__init__()
 
         self.number_of_compoents = 8
+  
         self.word_embeddings = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=config.pad_token_id)
         self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.hidden_size)
 
         # NOTICE: we add direct and dist as input to model the relative positions
         # so direct and dist embeddings are added correspondingly
-        self.direct_embeddings = nn.Embedding(config.max_2d_position_embeddings, config.hidden_size)
-        self.dist_embeddings = nn.Embedding(config.max_2d_position_embeddings, config.hidden_size)
+        self.direct_embeddings = nn.Embedding(9, config.hidden_size)
+        self.dist_embeddings = nn.Embedding(1415, config.hidden_size)
 
         # NOTICE: add segmentation id embeddings
         # the config can be reused max_position_embeddings is set to be 512
-        self.segmentation_ids_embeddings = nn.Embedding(config.max_2d_position_embeddings, config.hidden_size)
-        self.h_position_embeddings = nn.Embedding(config.max_2d_position_embeddings, config.hidden_size)
-        self.w_position_embeddings = nn.Embedding(config.max_2d_position_embeddings, config.hidden_size)
+        self.segmentation_ids_embeddings = nn.Embedding(9, config.hidden_size)
+        self.seg_h_embed = nn.Embedding(1001, config.hidden_size)
+        self.seg_w_embed = nn.Embedding(1001, config.hidden_size)
 
         self.LayerNorm = LayoutLMLayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
@@ -111,8 +112,8 @@ class LayoutLMEmbeddings(nn.Module):
 
         segmentation_ids_embeddings = self.segmentation_ids_embeddings(self._tensor_expand(segmentation_ids))
 
-        h_position_embeddings = self.h_position_embeddings(self._tensor_expand(seg_height))
-        w_position_embeddings = self.w_position_embeddings(self._tensor_expand(seg_width))
+        seg_h_embed = self.seg_h_embed(self._tensor_expand(seg_height))
+        seg_w_embed = self.seg_w_embed(self._tensor_expand(seg_width))
 
         # NOTICE: the way to calculate embeddings is changed correspondingly
         # print('word',words_embeddings.shape)
@@ -129,19 +130,12 @@ class LayoutLMEmbeddings(nn.Module):
             + direct_embeddings
             + dist_embeddings
             + segmentation_ids_embeddings
-            + h_position_embeddings
-            + w_position_embeddings
+            + seg_h_embed
+            + seg_w_embed
             #+ token_type_embeddings
         )
         embeddings = self.LayerNorm(embeddings)
         embeddings = self.dropout(embeddings)
-
-        # print('input_ids:',input_ids.shape)
-        # print('position_ids:',position_ids.shape)
-        # print('embeddings:',embeddings.shape)
-        # print('segmentation_ids:',segmentation_ids.shape)
-        # print('seg_width:',seg_width.shape)
-        # print('inputs_embeds:',inputs_embeds.shape)
 
         return embeddings
 
