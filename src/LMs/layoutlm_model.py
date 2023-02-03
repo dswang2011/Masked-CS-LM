@@ -91,9 +91,9 @@ class LayoutLMEmbeddings(nn.Module):
 
         device = input_ids.device if input_ids is not None else inputs_embeds.device
 
-        if position_ids is None:
-            position_ids = self.position_ids[:, :seq_length]
-        # position_ids = torch.tensor([[pos for pos in range(512)] for _ in range(batch_size)], device=device)
+        # if position_ids is None:
+        #     position_ids = self.position_ids[:, :seq_length]
+        position_ids = torch.tensor([[pos for pos in range(512)] for _ in range(batch_size)], device=device)
 
         #if token_type_ids is None:
         #    token_type_ids = torch.zeros(input_shape, dtype=torch.long, device=device)
@@ -135,6 +135,14 @@ class LayoutLMEmbeddings(nn.Module):
         )
         embeddings = self.LayerNorm(embeddings)
         embeddings = self.dropout(embeddings)
+
+        # print('input_ids:',input_ids.shape)
+        # print('position_ids:',position_ids.shape)
+        # print('embeddings:',embeddings.shape)
+        # print('segmentation_ids:',segmentation_ids.shape)
+        # print('seg_width:',seg_width.shape)
+        # print('inputs_embeds:',inputs_embeds.shape)
+
         return embeddings
 
 
@@ -596,6 +604,7 @@ class LayoutLMLMPredictionHead(nn.Module):
 
         # The output weights are the same as the input embeddings, but there is
         # an output-only bias for each token.
+        print('---from to:---', config.hidden_size, config.vocab_size)
         self.decoder = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         self.bias = nn.Parameter(torch.zeros(config.vocab_size))
@@ -747,6 +756,8 @@ class LayoutLMModel(LayoutLMPreTrainedModel):
 
     @add_start_docstrings_to_model_forward(LAYOUTLM_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
     @replace_return_docstrings(output_type=BaseModelOutputWithPoolingAndCrossAttentions, config_class=_CONFIG_FOR_DOC)
+
+
     def forward(
         self,
         input_ids: Optional[torch.LongTensor] = None,
@@ -801,6 +812,7 @@ class LayoutLMModel(LayoutLMPreTrainedModel):
 
         >>> last_hidden_states = outputs.last_hidden_state
         ```"""
+
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -968,6 +980,7 @@ class LayoutLMForMaskedLM(LayoutLMPreTrainedModel):
         >>> loss = outputs.loss
         ```"""
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+  
 
         outputs = self.layoutlm(
             input_ids,
@@ -995,10 +1008,14 @@ class LayoutLMForMaskedLM(LayoutLMPreTrainedModel):
         masked_lm_loss = None
         if labels is not None:
             loss_fct = CrossEntropyLoss()
+            print('preduct: ', prediction_scores.size())
+            print('labels:  ', labels.size())
             masked_lm_loss = loss_fct(
                 prediction_scores.view(-1, self.config.vocab_size),
                 labels.view(-1),
             )
+        else:
+            print('==== why there is no labels?=======')
 
         if not return_dict:
             output = (prediction_scores,) + outputs[2:]

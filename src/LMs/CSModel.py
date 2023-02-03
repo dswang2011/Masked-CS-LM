@@ -16,6 +16,7 @@ class CSModel(nn.Module):
         # self.roberta = RobertaModel(self.config)
         # self.layoutlm = AutoModelForTokenClassification.from_pretrained(opt.layoutlm_dir, num_labels=opt.num_labels, label2id=opt.label2id, id2label=opt.id2label)
         self.csmodel = LayoutLMForMaskedLM.from_pretrained(opt.layoutlm_large)
+        print('Find the path of configuration: ', opt.layoutlm_large)
         # freeze the bert model
         if freeze_bert:
             for param in self.roberta.parameters():

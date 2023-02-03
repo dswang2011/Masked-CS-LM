@@ -50,9 +50,11 @@ if __name__=='__main__':
     # 5.1 save to folder
     # params.dir_path = trainer.create_save_dir(params)    # prepare dir for saving best models
 
+    # 5.2 start training
     best_f1 = trainer.train(params, model, mydata)
     # inferencer.inference(params,model,mydata,'v3_base_benchmark_Jan26_'+str(params.start_chunk) +'.json')
 
+    # 5.2 look for training
     # for chunk in range(2,params.train_part+1):
     #     mydata.adjust(chunk)
     #     best_f1,best_loss = trainer.train(params, model, mydata)

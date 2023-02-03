@@ -22,11 +22,10 @@ class RVLCDIP:
 
         # get dataset from saved hf;
         self.train_dataset = self.get_data(opt.rvl_cdip).with_format("torch")
-        print(self.train_dataset)
-        print(self.train_dataset[0])
         # get proper masks and map to labels;
         self.masked_train_dataset = self.masked_inputs(self.train_dataset).with_format("torch")
-        print(self.masked_train_dataset[0])
+        print('masked dataset:',self.masked_train_dataset)
+
 
     def get_data(self, hf_path):
         return load_from_disk(hf_path)
@@ -37,7 +36,7 @@ class RVLCDIP:
 
 
     # get labels as well;
-    def masked_inputs(self,dataset, mask_ratio=0.3):
+    def masked_inputs(self,dataset, mask_ratio=0.20):
         '''
         return: selections, batch_inputs
         '''
