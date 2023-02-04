@@ -61,8 +61,9 @@ if __name__=="__main__":
 
     random.Random(3).shuffle(files)
 
-    subsets = list(split(files, 30))
-    for i,subset in enumerate(subsets):
+    subsets = list(split(files, 20))
+    for i in range(2,len(subsets)):
+        subset = subsets[i]
         print(len(subset))
         saveto = generate_and_save(i,subset)
         # print('saved to:', saveto)

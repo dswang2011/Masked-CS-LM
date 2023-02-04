@@ -21,16 +21,14 @@ class RVLCDIP:
         self.tokenizer = AutoTokenizer.from_pretrained(opt.layoutlm_large)
 
         # get dataset from saved hf;
+        print('load data from:', opt.rvl_cdip)
         self.train_dataset = self.get_data(opt.rvl_cdip).with_format("torch")
         # get proper masks and map to labels;
         self.masked_train_dataset = self.masked_inputs(self.train_dataset).with_format("torch")
-        print('masked dataset:',self.masked_train_dataset)
-
 
     def get_data(self, hf_path):
         return load_from_disk(hf_path)
 
-    
     # def map_one_match(encodings):
     #     inputs['labels'] = inputs.input_ids.detach.clone()
 

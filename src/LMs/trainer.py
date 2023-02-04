@@ -7,6 +7,8 @@ import time
 import numpy as np
 import os
 import pickle
+from datetime import datetime
+
 
 from datasets import load_metric
 metric = load_metric("seqeval")
@@ -225,12 +227,16 @@ def create_save_dir(params):
     return dir_path
 
 # Save the model
-def save_model(params, model, performance_str):
+def save_model(params, model, perform_dict):
     # 1) save the learned model (model and the params used)
     torch.save(model.state_dict(), os.path.join(params.dir_path, 'model'))
+
+    now=datetime.now()
+    str_dt = now.strftime("%d/%m/%Y %H:%M:%S")
+    perform_dict['finish_time'] = str_dt
 
     # 2) Write performance string
     eval_path = os.path.join(params.dir_path, 'eval')
     with open(eval_path, 'w') as f:
-        f.write(str(performance_str))
+        f.write(str(perform_dict))
 
