@@ -26,8 +26,6 @@ def train(opt, model, mydata):
     # 3 training
     best_f1 = 0.0
     best_loss = 99999.9
-    opt.dir_path = create_save_dir(opt)    # prepare dir for saving best models
-    
     
     for epoch in range(opt.epochs):    
         print('epoch:',epoch,'/',str(opt.epochs))
@@ -234,6 +232,8 @@ def save_model(params, model, perform_dict):
     now=datetime.now()
     str_dt = now.strftime("%d/%m/%Y %H:%M:%S")
     perform_dict['finish_time'] = str_dt
+
+    perform_dict['dataset_used'] = params.rvl_cdip
 
     # 2) Write performance string
     eval_path = os.path.join(params.dir_path, 'eval')

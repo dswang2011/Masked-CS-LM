@@ -29,14 +29,10 @@ if __name__=='__main__':
     params.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     print('Using device:', params.device)
 
-    # section 2, load data; prepare output_dim/num_labels, id2label, label2id for section3; 
-    mydata = pretrain_dataset.setup(params)
-    print(mydata.masked_train_dataset)
-    
-    # section 3, objective function and output dim/ move to trainer
+    # section 2, objective function and output dim/ move to trainer
     # this is usually covered by huggingface models
 
-    # section 4, model, loss function, and optimizer
+    # section 3, model, loss function, and optimizer
     if bool(params.continue_train):
         print('continue based on:', params.continue_with_model)
         model_params = pickle.load(open(os.path.join(params.continue_with_model,'config.pkl'),'rb'))
@@ -45,25 +41,24 @@ if __name__=='__main__':
     else:
         model = LMs.setup(params).to(params.device)
 
+    # section 4, saving path for output model
+    params.dir_path = trainer.create_save_dir(params)    # prepare dir for saving best models
 
-    # section 5, train and evaluate, train each 10000 for each part;
-    # 5.1 save to folder
-    # params.dir_path = trainer.create_save_dir(params)    # prepare dir for saving best models
+    # section 4, load data; prepare output_dim/num_labels, id2label, label2id for section3; 
+    # 4.1 traditional train
+    # mydata = pretrain_dataset.setup(params)
+    # print(mydata.masked_train_dataset)
+    # best_f1 = trainer.train(params, model, mydata)
 
-    # 5.2 start training
-    best_f1 = trainer.train(params, model, mydata)
-    # inferencer.inference(params,model,mydata,'v3_base_benchmark_Jan26_'+str(params.start_chunk) +'.json')
+    # 4.2 train many datasets
+    for i in range(2, 10):
+        params.rvl_cdip = '/home/ubuntu/air/vrdu/datasets/rvl_pretrain_datasets/'+str(i)+'_bert.hf'
+        mydata = pretrain_dataset.setup(params)
+        best_f1 = trainer.train(params, model, mydata)
+        del mydata
 
-    # 5.2 look for training
-    # for chunk in range(2,params.train_part+1):
-    #     mydata.adjust(chunk)
-    #     best_f1,best_loss = trainer.train(params, model, mydata)
-    #     inferencer.inference(params,model,mydata,'v3_base_benchmark_Jan26_'+str(chunk)+'.json')
 
-    #     print('best f1:', best_f1)
-    #     print('best loss:', best_loss)
-
-    # section 6, inference only (on test_dataset)
+    # section 5, inference only (on test_dataset)
     # inferencer.inference(params,model,mydata,'v3_base_benchmark_Jan_1pm.json')
 
 
