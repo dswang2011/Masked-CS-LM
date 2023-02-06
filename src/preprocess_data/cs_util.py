@@ -4,66 +4,17 @@ import math
 import numpy as np
 from math import sqrt
 
-# def _polar(rect_src : list, rect_dst : list) -> Tuple[int, int]:
-#     """Compute distance and angle from src to dst bounding boxes (poolar coordinates considering the src as the center)
-#     Args:
-#         rect_src (list) : source rectangle coordinates
-#         rect_dst (list) : destination rectangle coordinates
-    
-#     Returns:
-#         tuple (ints): distance and angle
-#     """
-    
-#     # check relative position
-#     left = (rect_dst[2] - rect_src[0]) <= 0 # left-top point
-#     bottom = (rect_src[3] - rect_dst[1]) <= 0   # 
-#     right = (rect_src[2] - rect_dst[0]) <= 0
-#     top = (rect_dst[3] - rect_src[1]) <= 0
-    
-#     vp_intersect = (rect_src[0] <= rect_dst[2] and rect_dst[0] <= rect_src[2]) # True if two rects "see" each other vertically, above or under
-#     hp_intersect = (rect_src[1] <= rect_dst[3] and rect_dst[1] <= rect_src[3]) # True if two rects "see" each other horizontally, right or left
-#     rect_intersect = vp_intersect and hp_intersect 
 
-#     center = lambda rect: ((rect[2]+rect[0])/2, (rect[3]+rect[1])/2)
-
-#     # # evaluate reciprocal position
-#     sc = center(rect_src)
-#     ec = center(rect_dst)
-#     new_ec = (ec[0] - sc[0], ec[1] - sc[1])
-#     # new_ec = (rect_dst[0]-rect_src[0], rect_dst[1]-rect_src[1])
-#     angle = int(math.degrees(math.atan2(new_ec[1], new_ec[0])))%360
     
-#     if rect_intersect:
-#         return 0, angle
-#     elif top and left:
-#         a, b = (rect_dst[2] - rect_src[0]), (rect_dst[3] - rect_src[1])
-#         return int(sqrt(a**2 + b**2)), angle
-#     elif left and bottom:
-#         a, b = (rect_dst[2] - rect_src[0]), (rect_dst[1] - rect_src[3])
-#         return int(sqrt(a**2 + b**2)), angle
-#     elif bottom and right:
-#         a, b = (rect_dst[0] - rect_src[2]), (rect_dst[1] - rect_src[3])
-#         return int(sqrt(a**2 + b**2)), angle
-#     elif right and top:
-#         a, b = (rect_dst[0] - rect_src[2]), (rect_dst[3] - rect_src[1])
-#         return int(sqrt(a**2 + b**2)), angle
-#     elif left:
-#         return (rect_src[0] - rect_dst[2]), angle
-#     elif right:
-#         return (rect_dst[0] - rect_src[2]), angle
-#     elif bottom:
-#         return (rect_dst[1] - rect_src[3]), angle
-#     elif top:
-#         return (rect_src[1] - rect_dst[3]), angle
 
 def _rule_polar(rect_src : list, rect_dst : list) -> Tuple[int, int]:
-    """Compute distance and angle from src to dst bounding boxes (poolar coordinates considering the src as the center)
+    """Compute distance and direction from src to dst bounding boxes
     Args:
         rect_src (list) : source rectangle coordinates
         rect_dst (list) : destination rectangle coordinates
     
     Returns:
-        tuple (ints): distance and angle
+        tuple (ints): distance and direction
     """
     
     # check relative position
