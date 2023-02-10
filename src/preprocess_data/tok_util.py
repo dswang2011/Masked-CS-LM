@@ -1,8 +1,10 @@
+import sys
+sys.path.append('../')
 import torch
 from transformers import RobertaTokenizer,RobertaForMaskedLM
-import cs_util
+from preprocess_data import cs_util
 
-from transformers import LayoutLMTokenizer
+from transformers import LayoutLMTokenizer,LayoutLMTokenizerFast
 from transformers import AutoTokenizer
 
 # tokenizer = RobertaTokenizer.from_pretrained('/home/ubuntu/resources/roberta.base.squad')
@@ -27,13 +29,15 @@ def pair_encoding(texts, tokenizer):
     s_encodings.input_ids[:, 0] = tokenizer.sep_token_id
     return c_encodings,s_encodings
 
+# input is encodings from one doc 
 def cs_encoding(c_encodings, s_encodings, neibors):
     # empty pad
     emp_inp, emp_att = _empty_s_encod()
 
     res = {'input_ids':[],'attention_mask':[],'dist':[],'direct':[]}
-    for idx, neib in enumerate(neibors):    # (dist, direct, neib_idx)
+    for idx, neib in enumerate(neibors):    # center_idx, to (dist, direct, neib_idx)
         cs_inps, cs_atts = [c_encodings.input_ids[idx]],[c_encodings.attention_mask[idx]]
+        # word_ids = c_encodings.word_ids(idx)
         dists, directs = [0.0],[0]
         for direct in range(1,9):
             if direct not in neib:

@@ -19,7 +19,10 @@ def setup(opt):
     elif opt.network_type == 'roberta':
         model = RobertaTokenClassifier(opt)
     elif opt.network_type == 'csmodel':
-        model = CSModel(opt)
+        if opt.task_type == 'cspretrain':
+            model = CSModel(opt)
+        elif opt.type_type == 'token-classifier':
+            model = CSTokenClassifier(opt)
     else:
         raise Exception('model not supported:{}'.format(opt.network_type))
 

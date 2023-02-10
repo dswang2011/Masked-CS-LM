@@ -9,7 +9,7 @@ import torch
 import pickle
 from utils.params import Params
 # from torch_geometric.transforms import NormalizeFeatures
-import pretrain_dataset
+import dataSetup
 from LMs import trainer
 import LMs
 
@@ -21,7 +21,7 @@ def parse_args(config_path):
 if __name__=='__main__':
 
     # Section 1, parse parameters
-    args = parse_args('config/lm.ini') # from config file
+    args = parse_args('config/finetune.ini') # from config file
     params = Params()   # put to param object
     params.parse_config(args.config_file)
     params.config_file = args.config_file
@@ -31,7 +31,8 @@ if __name__=='__main__':
 
     # section 2, objective function and output dim/ move to trainer
     # this is usually covered by huggingface models
-
+    mydata = dataSetup.setup(params)
+    print(mydata.trainable_dataset)
     # section 3, model, loss function, and optimizer
     if bool(params.continue_train):
         print('continue based on:', params.continue_with_model)
@@ -44,18 +45,13 @@ if __name__=='__main__':
     # section 4, saving path for output model
     params.dir_path = trainer.create_save_dir(params)    # prepare dir for saving best models
 
-    # section 4, load data; prepare output_dim/num_labels, id2label, label2id for section3; 
+    # section 5, load data; prepare output_dim/num_labels, id2label, label2id for section3; 
     # 4.1 traditional train
-    # mydata = pretrain_dataset.setup(params)
-    # print(mydata.masked_train_dataset)
-    # best_f1 = trainer.train(params, model, mydata)
 
-    # 4.2 train many datasets
-    for i in range(10, 20):
-        params.rvl_cdip = '/home/ubuntu/air/vrdu/datasets/rvl_pretrain_datasets/'+str(i)+'_bert.hf'
-        mydata = pretrain_dataset.setup(params)
-        best_f1 = trainer.train(params, model, mydata)
-        del mydata
+    print(mydata.trainable_dataset)
+    best_f1 = trainer.train(params, model, mydata)
+
+
 
 
     # section 5, inference only (on test_dataset)

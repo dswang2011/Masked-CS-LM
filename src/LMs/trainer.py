@@ -16,9 +16,11 @@ metric = load_metric("seqeval")
 
 def train(opt, model, mydata):
     # 1 data loader
-    loader_train = DataLoader(mydata.masked_train_dataset, batch_size=opt.batch_size,shuffle=True)
+    # loader_train = DataLoader(mydata.masked_train_dataset, batch_size=opt.batch_size,shuffle=True)
     # loader_test = DataLoader(mydata.test_dataset, batch_size=opt.batch_size)
 
+    loader_train = DataLoader(mydata.trainable_dataset['train'], batch_size=opt.batch_size,shuffle=True)
+    loader_test = DataLoader(mydata.trainable_dataset['test'], batch_size=opt.batch_size,shuffle=False)
     print(loader_train)
 
     # 2 optimizer
@@ -47,12 +49,13 @@ def train(opt, model, mydata):
             save_model(opt, model,{'loss':best_loss})
             print('The best model saved with loss:', best_loss, ' to ', opt.dir_path)
             continue
-        # if task_type == classification
-        # res_dict = test_eval(opt,model,loader_test)
-        # if res_dict['f1']>best_f1:
-        #     save_model(opt, model,res_dict)
-        #     best_f1 = res_dict['f1']
-        #     print('The best model saved with f1:', best_f1,' to ', opt.dir_path)
+        # if finetune models
+        if opt.task_type == 'token-classifier':
+            res_dict = test_eval(opt,model,loader_test)
+            if res_dict['f1']>best_f1:
+                save_model(opt, model,res_dict)
+                best_f1 = res_dict['f1']
+                print('The best model saved with f1:', best_f1,' to ', opt.dir_path)
     return best_f1
 
 
