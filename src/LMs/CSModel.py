@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 
 import torch.nn as nn
+from torch.nn import CrossEntropyLoss
 
 # from transformers import RobertaModel, RobertaConfig
 from transformers import LayoutLMForTokenClassification, AutoModelForTokenClassification
 from transformers import AutoModelForQuestionAnswering, AutoConfig
 from LMs.layoutlm_model import LayoutLMModel, LayoutLMForMaskedLM
+from transformers.utils import ModelOutput
+
 
 # this is CS masked language model, you cannot change the parameters from pre-trained anymore (unless you train from scratch)
 class CSModel(nn.Module):
@@ -36,8 +39,8 @@ class CSTokenClassifier(nn.Module):
         super(CSTokenClassifier, self).__init__()
         self.opt = opt
         self.num_labels = opt.num_labels    # num_labels from dataset loading class
-        self.csmodel = LayoutLMModel.from_pretrained(opt.layoutlm_large)
-
+        self.csmodel = LayoutLMModel.from_pretrained(opt.csmodel)   # customized layoutlm/csmodel
+        self.dropout = nn.Dropout(opt.dropout)
         # hidden size = 1024
         self.classifier = nn.Linear(1024, self.num_labels)   
 
@@ -50,8 +53,9 @@ class CSTokenClassifier(nn.Module):
     def forward(self,input_ids, attention_mask, dist, direct, seg_width,seg_height,segmentation_ids,labels, **args):
         outputs = self.csmodel(input_ids = input_ids, attention_mask = attention_mask, dist = dist, 
             direct = direct, seg_width=seg_width, seg_height=seg_height, segmentation_ids=segmentation_ids)
-
+        
         hidden_state = outputs[0]
+        # print(outputs.shape)
         center_sequence_output = hidden_state[:, :192]    # take (batch_size, 192, dim)
         center_sequence_output = self.dropout(center_sequence_output)
 

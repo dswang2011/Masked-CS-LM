@@ -42,6 +42,10 @@ if __name__=='__main__':
     else:
         model = LMs.setup(params).to(params.device)
 
+    # model 2
+    params.mypretrained = model
+    finetune_model = LMs.setup(params).to(params.device)
+
     # section 4, saving path for output model
     params.dir_path = trainer.create_save_dir(params)    # prepare dir for saving best models
 
@@ -49,10 +53,7 @@ if __name__=='__main__':
     # 4.1 traditional train
 
     print(mydata.trainable_dataset)
-    best_f1 = trainer.train(params, model, mydata)
-
-
-
+    best_f1 = trainer.finetune(params, finetune_model, mydata)
 
     # section 5, inference only (on test_dataset)
     # inferencer.inference(params,model,mydata,'v3_base_benchmark_Jan_1pm.json')

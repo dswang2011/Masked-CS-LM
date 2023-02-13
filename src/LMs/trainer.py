@@ -13,22 +13,17 @@ from datetime import datetime
 from datasets import load_metric
 metric = load_metric("seqeval")
 
-
-def train(opt, model, mydata):
+def finetune(opt,model, mydata):
     # 1 data loader
-    # loader_train = DataLoader(mydata.masked_train_dataset, batch_size=opt.batch_size,shuffle=True)
-    # loader_test = DataLoader(mydata.test_dataset, batch_size=opt.batch_size)
-
     loader_train = DataLoader(mydata.trainable_dataset['train'], batch_size=opt.batch_size,shuffle=True)
     loader_test = DataLoader(mydata.trainable_dataset['test'], batch_size=opt.batch_size,shuffle=False)
-    print(loader_train)
 
     # 2 optimizer
     optimizer = torch.optim.AdamW(model.parameters(),lr=opt.lr, betas=(0.9,0.999),eps=1e-08)
     # 3 training
     best_f1 = 0.0
     best_loss = 99999.9
-    
+
     for epoch in range(opt.epochs):    
         print('epoch:',epoch,'/',str(opt.epochs))
         # train mode
@@ -56,6 +51,40 @@ def train(opt, model, mydata):
                 save_model(opt, model,res_dict)
                 best_f1 = res_dict['f1']
                 print('The best model saved with f1:', best_f1,' to ', opt.dir_path)
+    return best_f1
+
+def pretrain(opt, model, mydata):
+    # 1 data loader
+    loader_train = DataLoader(mydata.masked_train_dataset, batch_size=opt.batch_size,shuffle=True)
+    # loader_test = DataLoader(mydata.test_dataset, batch_size=opt.batch_size)
+
+    # 2 optimizer
+    optimizer = torch.optim.AdamW(model.parameters(),lr=opt.lr, betas=(0.9,0.999),eps=1e-08)
+    # 3 training
+    best_f1 = 0.0
+    best_loss = 99999.9
+    
+    for epoch in range(opt.epochs):    
+        print('epoch:',epoch,'/',str(opt.epochs))
+        # train mode
+        model.train()
+        for batch in tqdm(loader_train, desc = 'Training'):
+        # for idx,batch in enumerate(loader_train):
+            optimizer.zero_grad()  # Clear gradients.
+            outputs = predict_one_batch(opt,model,batch,eval=False)
+            loss = outputs.loss
+            # print('Loss:',loss.item())
+            loss.backward()
+            optimizer.step()  # Update parameters based on gradients.
+        
+        # eval mode
+        if opt.task_type == 'cspretrain':
+            # if loss.item()<best_loss:
+            best_loss=loss.item()
+            csmodel = model.csmodel.layoutlm  # to be saved
+            save_pretrain_model(opt, csmodel ,{'loss':best_loss})
+            print('The best layoutlm model saved with loss:', best_loss, ' to ', opt.dir_path)
+
     return best_f1
 
 
@@ -102,28 +131,27 @@ def predict_one_batch(opt, model, batch, eval=False):
     elif opt.task_type == 'token-classifier':
         input_ids = batch['input_ids'].to(opt.device)
         attention_mask = batch['attention_mask'].to(opt.device)
-        bbox = batch['bbox'].to(opt.device)
+        dist = batch['dist'].to(opt.device)
+        direct = batch['direct'].to(opt.device)
+        seg_width = batch['seg_width'].to(opt.device)
+        seg_height = batch['seg_height'].to(opt.device)
         labels = batch['labels'].to(opt.device)
-        pixel_values = batch['pixel_values'].to(opt.device)
-        gvect = batch['gvect'].to(opt.device)
-        # if 'graph_roberta' == opt.network_type:
-        #     bbox = None
-        #     pixel_values = None
-        # if 'roberta' == opt.network_type:
-        #     gvect = None
-
-        # for key,val in batch.items():
-        #     val = val.to(opt.device)
+        segmentation_ids = torch.tensor([[0,1,2,3,4,5,6,7,8] for _ in range(len(input_ids))])
+        segmentation_ids.to(opt.device)
 
         if eval:
             with torch.no_grad():
                 outputs = model(
-                    input_ids = input_ids, bbox = bbox, attention_mask = attention_mask, 
-                    pixel_values = pixel_values, labels = labels, gvect = gvect )  
+                    input_ids = input_ids,attention_mask = attention_mask, 
+                    dist = dist, direct = direct, 
+                    seg_width = seg_width,seg_height=seg_height,
+                    segmentation_ids=segmentation_ids,labels=labels )  
         else:
             outputs = model(
-                input_ids = input_ids, bbox = bbox, attention_mask = attention_mask, 
-                pixel_values = pixel_values, labels = labels, gvect = gvect )
+                    input_ids = input_ids,attention_mask = attention_mask, 
+                    dist = dist, direct = direct, 
+                    seg_width = seg_width,seg_height=seg_height,
+                    segmentation_ids=segmentation_ids,labels=labels)
 
     elif opt.task_type == 'docvqa':
         input_ids = batch['input_ids'].to(opt.device)
@@ -227,6 +255,21 @@ def create_save_dir(params):
     pickle.dump(params, open(os.path.join(dir_path, 'config.pkl'), 'wb'))
     return dir_path
 
+def save_pretrain_model(params, pretrain_model, perform_dict):
+    # 1) save the learned model (model and the params used)
+    # torch.save(model.state_dict(), os.path.join(params.dir_path, 'model'))
+
+    pretrain_model.save_pretrained(params.dir_path)
+
+    now=datetime.now()
+    str_dt = now.strftime("%d/%m/%Y %H:%M:%S")
+    perform_dict['finish_time'] = str_dt
+
+    # 2) Write performance string
+    eval_path = os.path.join(params.dir_path, 'eval')
+    with open(eval_path, 'w') as f:
+        f.write(str(perform_dict))
+
 # Save the model
 def save_model(params, model, perform_dict):
     # 1) save the learned model (model and the params used)
@@ -236,7 +279,7 @@ def save_model(params, model, perform_dict):
     str_dt = now.strftime("%d/%m/%Y %H:%M:%S")
     perform_dict['finish_time'] = str_dt
 
-    perform_dict['dataset_used'] = params.rvl_cdip
+    perform_dict['dataset_used'] = ''
 
     # 2) Write performance string
     eval_path = os.path.join(params.dir_path, 'eval')

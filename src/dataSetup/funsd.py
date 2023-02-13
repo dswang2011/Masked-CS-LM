@@ -1,12 +1,13 @@
 import sys
 sys.path.append('../')
 import os
-from datasets import load_dataset
+from datasets import load_dataset, Features, Sequence, Value
 from datasets import Dataset, DatasetDict
 from utils.params import Params
 import json
 from preprocess_data import img_util, tok_util, cs_util
 from transformers import AutoTokenizer
+import datasets
 
 class FUNSD:
     def __init__(self,opt):    
@@ -112,8 +113,19 @@ class FUNSD:
 
 
     def get_trainable(self, train_test):
-        train = Dataset.from_generator(self._cs_producer, gen_kwargs={'batch':train_test['train']})
-        test = Dataset.from_generator(self._cs_producer, gen_kwargs={'batch':train_test['test']})
+
+        features = Features({
+            'input_ids': Sequence(feature=Value(dtype='int64')),
+            'attention_mask': Sequence(Value(dtype='int64')),
+            'dist': Sequence(Value(dtype='int64')),
+            'direct': Sequence(Value(dtype='int64')),
+            'seg_width': Sequence(Value(dtype='int64')),
+            'seg_height': Sequence(Value(dtype='int64')),
+            'labels': Sequence(feature=Value(dtype='int64'))
+        })
+        train = self._cs_producer(train_test['train']).map(batched=True, features=features)
+        test = self._cs_producer(train_test['test']).map(batched=True, features=features)
+
         return DatasetDict({
             "train" : train.with_format("torch") , 
             "test" : test.with_format("torch") 
@@ -121,16 +133,8 @@ class FUNSD:
 
     # produce by maping data
     def _cs_producer(self,batch):
-        # features = Features({
-        #     'input_ids': Sequence(feature=Value(dtype='int64')),
-        #     'attention_mask': Sequence(Value(dtype='int64')),
-        #     'dist': Sequence(Value(dtype='int64')),
-        #     'direct': Sequence(Value(dtype='int64')),
-        #     'seg_width': Sequence(Value(dtype='int64')),
-        #     'seg_height': Sequence(Value(dtype='int64')),
-        #     'labels': Sequence(feature=Value(dtype='int64'))
-        # })
 
+        all_batch = []
         for doc in batch:
             seg_texts = doc['seg_texts']
             seg_labels = doc['labels']
@@ -140,7 +144,13 @@ class FUNSD:
             extended_labels = [self._extend_label(seg_text,seg_label) for seg_text,seg_label in zip(seg_texts,seg_labels)]
             final_doc_dict['labels'] = extended_labels
             # ['input_ids', 'attention_mask', 'dist', 'direct', 'seg_width', 'seg_height', 'labels']
-            yield final_doc_dict
+            # print(final_doc_dict.keys())
+            # for k,v in final_doc_dict.items():
+            #     print(k, ':',len(v[0]))
+            doc_dataset = Dataset.from_dict(final_doc_dict)
+            all_batch.append(doc_dataset)
+        batch_dataset = datasets.concatenate_datasets(all_batch)
+        return batch_dataset
 
     
     # get a seqeunce of labels for a segment text;
@@ -189,7 +199,7 @@ if __name__=='__main__':
     params = Params() 
     params.funsd_train = '/home/ubuntu/air/vrdu/datasets/FUNSD/training_data/'
     params.funsd_test = '/home/ubuntu/air/vrdu/datasets/FUNSD/testing_data/'
-    params.layoutlm_dir = '/home/ubuntu/air/vrdu/models/layoutlmv1.base'
+    params.layoutlm_large = '/home/ubuntu/air/vrdu/models/layoutlmv1.base'
     funsd = FUNSD(params)
     train_dataset = funsd.train_test_dataset['train']
     '''

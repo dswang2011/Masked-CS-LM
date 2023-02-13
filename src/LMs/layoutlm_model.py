@@ -1006,8 +1006,8 @@ class LayoutLMForMaskedLM(LayoutLMPreTrainedModel):
                 prediction_scores.view(-1, self.config.vocab_size),
                 labels.view(-1),
             )
-        else:
-            print('==== why there is no labels?=======')
+        # else:
+        #     print('==== why there is no labels?=======')
 
         if not return_dict:
             output = (prediction_scores,) + outputs[2:]
@@ -1017,5 +1017,6 @@ class LayoutLMForMaskedLM(LayoutLMPreTrainedModel):
             loss=masked_lm_loss,
             logits=prediction_scores,
             hidden_states=outputs.hidden_states,
+            # last_hidden_states=sequence_output, # === added by me !!=====
             attentions=outputs.attentions,
         )
