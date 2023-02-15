@@ -18,8 +18,8 @@ class FUNSD:
         self.id2label = {0: 'O', 1: 'B-HEADER', 2: 'I-HEADER', 3: 'B-QUESTION', 4: 'I-QUESTION', 5: 'B-ANSWER', 6: 'I-ANSWER'}
         self.label2id = {v:k for k,v in self.id2label.items()}
         # set glob param
-        self.opt.num_labels = len(self.id2label.keys())
-        self.opt.label_list = list(self.id2label.values())
+        self.opt.num_labels = len(self.id2label.keys()) # for token classification usage;
+        self.opt.label_list = list(self.id2label.values())  #
 
         self.tokenizer = AutoTokenizer.from_pretrained(opt.layoutlm_large) #layoutLMv1.large tokenizer
 
@@ -111,7 +111,6 @@ class FUNSD:
         return {"id": docIDs, "seg_texts": batch_seg_texts, "shared_boxes": batch_seg_boxs, "labels": batch_seg_labels}
 
 
-
     def get_trainable(self, train_test):
 
         features = Features({
@@ -133,8 +132,7 @@ class FUNSD:
 
     # produce by maping data
     def _cs_producer(self,batch):
-
-        all_batch = []
+        all_batch = []  # 
         for doc in batch:
             seg_texts = doc['seg_texts']
             seg_labels = doc['labels']
@@ -147,13 +145,13 @@ class FUNSD:
             # print(final_doc_dict.keys())
             # for k,v in final_doc_dict.items():
             #     print(k, ':',len(v[0]))
-            doc_dataset = Dataset.from_dict(final_doc_dict)
+            doc_dataset = Dataset.from_dict(final_doc_dict) # produce one dataset for each doc
             all_batch.append(doc_dataset)
-        batch_dataset = datasets.concatenate_datasets(all_batch)
+        batch_dataset = datasets.concatenate_datasets(all_batch)    # concatenate all doc datasets
         return batch_dataset
 
     
-    # get a seqeunce of labels for a segment text;
+    # get a seqeunce of labels for a single segment text;
     def _extend_label(self,seg_text,label):
         seg_words = seg_text.split(' ')
         token_labels = []                  

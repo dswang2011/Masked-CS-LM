@@ -4,7 +4,7 @@ import math
 import numpy as np
 from math import sqrt
 
-
+import tesseract4img
     
 
 def _rule_polar(rect_src : list, rect_dst : list) -> Tuple[int, int]:
@@ -67,9 +67,9 @@ def _eight_neibs(idx, N,pair_lookup):
         dist,direct = pair_lookup[(idx,neib_idx)]
         if direct in direct2near.keys():
             if dist<direct2near[direct][0]:
-                direct2near[direct] = (dist, direct, neib_idx)
+                direct2near[direct] = (dist, neib_idx)
         else:
-            direct2near[direct] = (dist, direct, neib_idx)
+            direct2near[direct] = (dist, neib_idx)
     return direct2near
 
 def rolling_neibor_matrix(bboxs):
@@ -98,4 +98,37 @@ def rolling_8neibors(bboxs):
         # value = (dist, direct, neib_idx)
         neibors.append(direct2near)
     return neibors
+
+from PIL import Image, ImageDraw, ImageFont
+import IPython.display as display
+
+if __name__=='__main__':
+    file_path = '/home/ubuntu/air/vrdu/datasets/docvqa/test/documents/ffdw0217_13.png'
+    # file_path = '/home/ubuntu/air/vrdu/datasets/images/imagesa/a/a/a/aaa06d00/50486482-6482.tif'
+    image = Image.open(file_path)
+    image = image.convert("RGB")
+    draw = ImageDraw.Draw(image, "RGBA")
+
+
+    one_doc = tesseract4img.image_to_doc(file_path, box_norm=False)
+    texts, boxes, token_nums = tesseract4img.doc_to_segs(one_doc)
+
+    neibs = rolling_8neibors(boxes)
+
+    # take one
+    idx = 5
+    direct2near = neibs[idx]
+    c_box = boxes[idx]
+    print(texts[idx], c_box)
+    # draw center
+    draw.rectangle(c_box, outline='red', width=3)
+    for direct, (dist, neib_idx) in direct2near.items():
+        n_box = boxes[neib_idx]
+        print(direct, ':',texts[neib_idx], n_box)
+        draw.rectangle(n_box, outline='orange', width=2)
+    
+    # image.show()
+    image = image.save("temp.jpg")
+
+
 

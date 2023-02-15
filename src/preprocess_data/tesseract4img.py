@@ -23,7 +23,7 @@ def doc_to_segs(one_doc):
 
     seg_ids = one_doc['seg_ids']
     tokens = one_doc['tokens']
-    boxes = one_doc['bboxes']
+    boxes = one_doc['share_bboxes']   # shared boxes, share_bboxes, bboxes; here, it must be shared because it is seg oriented
 
     block_num = seg_ids[0]  # 11
     window_tokens = [tokens[0]]
@@ -49,11 +49,11 @@ def doc_to_segs(one_doc):
     return texts,bboxes, word_nums
 
 
-def image_to_doc(image_path, adjust_share_bbox=True):
+def image_to_doc(image_path, adjust_share_bbox=True, box_norm=True):
     '''
     rtype: return one_doc, where the bbox and h/w are normalized to 1000*1000
     '''
-    # save to:
+    # save to: (and will be extended with a 'shared_boxes')
     one_doc = {'tokens':[],'bboxes':[], 'seg_ids':[],'image':None}
 
     image, size = _load_image(image_path)
@@ -87,7 +87,10 @@ def image_to_doc(image_path, adjust_share_bbox=True):
 
         # produce one sample
         one_doc['tokens'].append(token)
-        one_doc['bboxes'].append(img_util._normalize_bbox([x0,y0,x1,y1], size))
+        if box_norm:
+            one_doc['bboxes'].append(img_util._normalize_bbox([x0,y0,x1,y1], size))
+        else:
+            one_doc['bboxes'].append([x0,y0,x1,y1])
         one_doc['seg_ids'].append(block_num)
 
     # adjust the shared box
@@ -152,15 +155,17 @@ if __name__=='__main__':
 
     # step2: wrap to huggingface dataset
     final_dict = tok_util.doc_2_final_dict(boxes,texts,token_nums)
-    dataset = Dataset.from_dict(final_dict).with_format("torch")
-    print(dataset)
-    for i,row in enumerate(dataset):
-        print('------')
-        # print(texts[i])
-        for k,v in row.items():
-            print(k,v)
-        if i>2:
-            break
+    print(final_dict.keys())
+    
+    # dataset = Dataset.from_dict(final_dict).with_format("torch")
+    # print(dataset)
+    # for i,row in enumerate(dataset):
+    #     print('------')
+    #     # print(texts[i])
+    #     for k,v in row.items():
+    #         print(k,v)
+    #     if i>2:
+    #         break
 
 
     # step3: models

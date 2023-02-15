@@ -6,19 +6,23 @@ from torch.nn import CrossEntropyLoss
 # from transformers import RobertaModel, RobertaConfig
 from transformers import LayoutLMForTokenClassification, AutoModelForTokenClassification
 from transformers import AutoModelForQuestionAnswering, AutoConfig
-from LMs.layoutlm_model import LayoutLMModel, LayoutLMForMaskedLM
+from LMs.layoutlm_model import LayoutLMModel, LayoutLMForMaskedLM,LayoutLMOnlyMLMHead
 from transformers.utils import ModelOutput
+from transformers import AutoConfig
+
 
 
 # this is CS masked language model, you cannot change the parameters from pre-trained anymore (unless you train from scratch)
-class CSModel(nn.Module):
+class CSMaskedLM(nn.Module):
     def __init__(self, opt, freeze_bert=False):
-        super(CSModel, self).__init__()
+        super(CSMaskedLM, self).__init__()
         self.opt = opt
-        # self.config = RobertaConfig.from_pretrained(opt.roberta_dir)
-        # self.roberta = RobertaModel(self.config)
-        # self.layoutlm = AutoModelForTokenClassification.from_pretrained(opt.layoutlm_dir, num_labels=opt.num_labels, label2id=opt.label2id, id2label=opt.id2label)
-        self.csmodel = LayoutLMForMaskedLM.from_pretrained(opt.layoutlm_large)
+        self.config = AutoConfig.from_pretrained(opt.layoutlm_large)
+
+        self.cs_layoutlm = LayoutLMModel.from_pretrained(opt.csmodel)
+        self.cls = LayoutLMOnlyMLMHead(self.config)
+
+        # self.csmodel = LayoutLMForMaskedLM.from_pretrained(opt.layoutlm_large)
         print('Find the path of configuration: ', opt.layoutlm_large)
         # freeze the bert model
         if freeze_bert:
@@ -27,9 +31,38 @@ class CSModel(nn.Module):
         
 
     def forward(self,input_ids, attention_mask, dist, direct, seg_width,seg_height,segmentation_ids,labels, **args):
-        outputs = self.csmodel(input_ids = input_ids, attention_mask = attention_mask, dist = dist, 
-            direct = direct, seg_width=seg_width, seg_height=seg_height, segmentation_ids=segmentation_ids, labels = labels)
+
+        return_dict = self.config.use_return_dict
+
+        outputs = self.cs_layoutlm(input_ids = input_ids, attention_mask = attention_mask, dist = dist, 
+            direct = direct, seg_width=seg_width, seg_height=seg_height, segmentation_ids=segmentation_ids)
         # outputs = self.layoutlm(input_ids = input_ids, bbox = None, attention_mask = attention_mask, pixel_values = None, labels = labels)
+
+        sequence_output = outputs[0]
+        prediction_scores = self.cls(sequence_output)
+
+        masked_lm_loss = None
+        if labels is not None:
+            loss_fct = CrossEntropyLoss()
+            masked_lm_loss = loss_fct(
+                prediction_scores.view(-1, self.config.vocab_size),
+                labels.view(-1),
+            )
+        # else:
+        #     print('==== why there is no labels?=======')
+
+        if not return_dict:
+            output = (prediction_scores,) + outputs[2:]
+            return ((masked_lm_loss,) + output) if masked_lm_loss is not None else output
+
+        return ModelOutput(
+            loss=masked_lm_loss,
+            logits=prediction_scores,
+            hidden_states=outputs.hidden_states,
+            # last_hidden_states=sequence_output, # === added by me !!=====
+            attentions=outputs.attentions,
+        )
+
         return outputs
 
 

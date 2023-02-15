@@ -33,13 +33,8 @@ if __name__=='__main__':
     # this is usually covered by huggingface models
 
     # section 3, model, loss function, and optimizer
-    if bool(params.continue_train):
-        print('continue based on:', params.continue_with_model)
-        model_params = pickle.load(open(os.path.join(params.continue_with_model,'config.pkl'),'rb'))
-        model = LMs.setup(model_params).to(params.device)
-        model.load_state_dict(torch.load(os.path.join(params.continue_with_model,'model')))
-    else:
-        model = LMs.setup(params).to(params.device)
+    # load from cs model checkpoint
+    model = LMs.setup(params).to(params.device)
 
     # section 4, saving path for output model
     params.dir_path = trainer.create_save_dir(params)    # prepare dir for saving best models, put config info first
@@ -51,8 +46,8 @@ if __name__=='__main__':
     # best_f1 = trainer.train(params, model, mydata)
 
     # 4.2 train many datasets
-    for i in range(10, 20):
-        params.rvl_cdip = '/home/ubuntu/air/vrdu/datasets/rvl_pretrain_datasets/'+str(i)+'_bert.hf'
+    for i in range(0, 3):
+        params.rvl_cdip = '/home/ubuntu/air/vrdu/datasets/rvl_pretrain_datasets/'+str(i)+'_fixed_bert.hf'
         mydata = pretrain_dataset.setup(params)
         best_f1 = trainer.pretrain(params, model, mydata)
         del mydata

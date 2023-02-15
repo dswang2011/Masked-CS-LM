@@ -47,7 +47,7 @@ def cs_encoding(c_encodings, s_encodings, neibors):
                 dists.append(1000)
                 directs.append(direct)
             else:
-                dist, direct, neib_idx = neib[direct]
+                dist, neib_idx = neib[direct]
                 cs_inps.append(s_encodings.input_ids[neib_idx])
                 cs_atts.append(s_encodings.attention_mask[neib_idx])
 
@@ -75,7 +75,7 @@ def get_relative_info(boxes,neibors, token_nums):
                 s_w.append(1000)
                 s_h.append(1000)
             else:
-                dist, direct, neib_idx = neib[direct]
+                dist, neib_idx = neib[direct]
                 nw,nh = int(boxes[neib_idx][2]-boxes[neib_idx][0]), int(boxes[neib_idx][3]-boxes[neib_idx][1])
                 s_w.append(nw)
                 s_h.append(nh)
@@ -96,3 +96,13 @@ def doc_2_final_dict(boxes,texts,token_nums):
     return final_doc_dict
 
 
+from PIL import Image, ImageDraw, ImageFont
+if __name__=='__main__':
+    image = Image.open("/content/data/training_data/images/0000971160.png")
+    image = image.convert("RGB")
+    draw = ImageDraw.Draw(image, "RGBA")
+
+    draw.rectangle(box, outline='blue', width=1)
+    draw.rectangle(general_box, outline=label2color[label], width=2)
+    # draw.text((general_box[0] + 10, general_box[1] - 10), label, fill=label2color[label], font=font)
+    image

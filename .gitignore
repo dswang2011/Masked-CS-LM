@@ -1,0 +1,10 @@
+*.bak
+__pycache__/*
+*.pyc
+glove/*
+data/*
+eval/*
+models/__pycache__/*
+dataload/__pycache__/*
+tmp_dir/*
+src/tmp_dir/*

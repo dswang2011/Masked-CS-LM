@@ -33,7 +33,7 @@ def split(input_list, n):
 # step3: for each subset images:
 # 
 def generate_and_save(set_id, imgs):
-    saveto = '/home/ubuntu/air/vrdu/datasets/rvl_pretrain_datasets/' + str(set_id) +'_bert.hf'
+    saveto = '/home/ubuntu/air/vrdu/datasets/rvl_pretrain_datasets/' + str(set_id) +'_fixed_bert.hf'
     all_doc_dataset = []
 
     for i,img_path in enumerate(imgs):
@@ -58,11 +58,10 @@ def generate_and_save(set_id, imgs):
 if __name__=="__main__":
     files = get_file_list()
 
-
-    random.Random(3).shuffle(files)
+    random.Random(5).shuffle(files)
 
     subsets = list(split(files, 20))
-    for i in range(2,len(subsets)):
+    for i in range(0,len(subsets)):
         subset = subsets[i]
         print(len(subset))
         saveto = generate_and_save(i,subset)

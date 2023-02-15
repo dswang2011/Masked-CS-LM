@@ -36,7 +36,7 @@ def _adjust_shared_bbox(doc_dict):
     for r in range(1,len(seg_ids)):
         curr_seg = seg_ids[r]
         if curr_seg!=block_num:
-            new_bboxes = _get_line_bbox(window_bboxes)
+            new_bboxes = _get_line_bbox(window_bboxes)  
             doc_dict['share_bboxes'] += new_bboxes
             # reset the params
             l = r

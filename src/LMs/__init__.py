@@ -3,7 +3,7 @@
 from LMs.LayoutLM import LayoutLMTokenclassifier
 from LMs.LayoutLM import LayoutLM4DocVQA
 from LMs.Roberta import GraphRobertaTokenClassifier, RobertaTokenClassifier
-from LMs.CSModel import CSModel,CSTokenClassifier
+from LMs.CSModel import CSTokenClassifier,CSMaskedLM
 
 def setup(opt):
     print('network:' + opt.network_type)
@@ -21,7 +21,7 @@ def setup(opt):
     elif opt.network_type == 'csmodel':
         if opt.task_type == 'cspretrain':
             print('model: load masked-csmodel for mlm')
-            model = CSModel(opt)
+            model = CSMaskedLM(opt)
         elif opt.task_type == 'token-classifier':
             print('model: load csmodel for token classification')
             model = CSTokenClassifier(opt)

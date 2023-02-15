@@ -8,6 +8,7 @@ import numpy as np
 import os
 import pickle
 from datetime import datetime
+from accelerate import Accelerator
 
 
 from datasets import load_metric
@@ -17,7 +18,7 @@ def finetune(opt,model, mydata):
     # 1 data loader
     loader_train = DataLoader(mydata.trainable_dataset['train'], batch_size=opt.batch_size,shuffle=True)
     loader_test = DataLoader(mydata.trainable_dataset['test'], batch_size=opt.batch_size,shuffle=False)
-
+    
     # 2 optimizer
     optimizer = torch.optim.AdamW(model.parameters(),lr=opt.lr, betas=(0.9,0.999),eps=1e-08)
     # 3 training
@@ -56,14 +57,19 @@ def finetune(opt,model, mydata):
 def pretrain(opt, model, mydata):
     # 1 data loader
     loader_train = DataLoader(mydata.masked_train_dataset, batch_size=opt.batch_size,shuffle=True)
-    # loader_test = DataLoader(mydata.test_dataset, batch_size=opt.batch_size)
-
     # 2 optimizer
     optimizer = torch.optim.AdamW(model.parameters(),lr=opt.lr, betas=(0.9,0.999),eps=1e-08)
-    # 3 training
+
+
+    if bool(opt.multi_gpu_accelerator):
+        accelerator = Accelerator()
+        loader_train, model, optimizer = accelerator.prepare(
+            loader_train, model, optimizer
+        )    
+    
     best_f1 = 0.0
     best_loss = 99999.9
-    
+
     for epoch in range(opt.epochs):    
         print('epoch:',epoch,'/',str(opt.epochs))
         # train mode
@@ -73,10 +79,12 @@ def pretrain(opt, model, mydata):
             optimizer.zero_grad()  # Clear gradients.
             outputs = predict_one_batch(opt,model,batch,eval=False)
             loss = outputs.loss
-            # print('Loss:',loss.item())
-            loss.backward()
+            if bool(opt.multi_gpu_accelerator):
+                accelerator.backward(loss)
+            else:
+                loss.backward()
             optimizer.step()  # Update parameters based on gradients.
-        
+
         # eval mode
         if opt.task_type == 'cspretrain':
             # if loss.item()<best_loss:
@@ -106,15 +114,25 @@ def test_eval(opt,model,loader_test):
 # for backpropagation use, so define the input variables
 def predict_one_batch(opt, model, batch, eval=False):
     if opt.task_type == 'cspretrain':
-        input_ids = batch['input_ids'].to(opt.device)
-        attention_mask = batch['attention_mask'].to(opt.device)
-        dist = batch['dist'].to(opt.device)
-        direct = batch['direct'].to(opt.device)
-        seg_width = batch['seg_width'].to(opt.device)
-        seg_height = batch['seg_height'].to(opt.device)
-        labels = batch['labels'].to(opt.device)
-        segmentation_ids = torch.tensor([[0,1,2,3,4,5,6,7,8] for _ in range(len(input_ids))])
-        segmentation_ids.to(opt.device)
+        if bool(opt.multi_gpu_accelerator):
+            input_ids = batch['input_ids']
+            attention_mask = batch['attention_mask']
+            dist = batch['dist']
+            direct = batch['direct']
+            seg_width = batch['seg_width']
+            seg_height = batch['seg_height']
+            labels = batch['labels']
+            segmentation_ids = torch.tensor([[0,1,2,3,4,5,6,7,8] for _ in range(len(input_ids))])
+        else:
+            input_ids = batch['input_ids'].to(opt.device)
+            attention_mask = batch['attention_mask'].to(opt.device)
+            dist = batch['dist'].to(opt.device)
+            direct = batch['direct'].to(opt.device)
+            seg_width = batch['seg_width'].to(opt.device)
+            seg_height = batch['seg_height'].to(opt.device)
+            labels = batch['labels'].to(opt.device)
+            segmentation_ids = torch.tensor([[0,1,2,3,4,5,6,7,8] for _ in range(len(input_ids))])
+            segmentation_ids.to(opt.device)
 
         if eval:
             with torch.no_grad():
