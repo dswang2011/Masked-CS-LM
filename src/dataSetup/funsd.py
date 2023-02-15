@@ -63,10 +63,13 @@ class FUNSD:
             'train':train,
             'test':test
         })
-    def _load_samples(self,base_dir):
+    def _load_samples(self,base_dir,norm_box=True):
         ann_dir = os.path.join(base_dir, "adjusted_annotations")
         img_dir = os.path.join(base_dir, "images")
         
+        img_paths = []
+        links = []
+
         batch_seg_texts = []
         batch_seg_labels = []
         batch_seg_boxs = []
@@ -77,6 +80,8 @@ class FUNSD:
             seg_texts = []
             labels = []
             shared_boxes = []
+            pair_labels = []
+            ids = []
 
             file_path = os.path.join(ann_dir, file)
             with open(file_path, "r", encoding="utf8") as f:
@@ -96,19 +101,37 @@ class FUNSD:
                 
                 seg_texts.append(text)
                 labels.append(label)
+                ids.append(item['id'])
+
+                for pair in item['linking']:
+                    pair_labels.append(pair)
 
                 # shared box
                 for w in words:
-                    cur_line_bboxes.append(img_util._normalize_bbox(w["box"], size))
+                    if norm_box:
+                        cur_line_bboxes.append(img_util._normalize_bbox(w["box"], size))
+                    else:
+                        cur_line_bboxes.append(w["box"])
                 cur_line_bboxes = img_util._get_line_bbox(cur_line_bboxes)
                 shared_boxes.append(cur_line_bboxes[0])
+            # post-process pair links
+            for i,pair in enumerate(pair_labels):
+                pair_comb = labels[pair[0]]+'_'+labels[pair[1]]
+                if pair_comb != 'question_answer': continue
+                # reindex with natural idx
+                pair_labels[i] = [ids.index(pair[0]),ids.index(pair[1])]
+            
+
             # batch
             batch_seg_boxs.append(shared_boxes)
             batch_seg_texts.append(seg_texts)
             batch_seg_labels.append(labels)
+            img_paths.append(image_path)
+            links.append(pair_labels)
 
 
-        return {"id": docIDs, "seg_texts": batch_seg_texts, "shared_boxes": batch_seg_boxs, "labels": batch_seg_labels}
+        return {"id": docIDs, "seg_texts": batch_seg_texts, "shared_boxes": batch_seg_boxs, 
+        "labels": batch_seg_labels, 'img_path':img_paths, 'links':links}
 
 
     def get_trainable(self, train_test):
@@ -126,19 +149,19 @@ class FUNSD:
         test = self._cs_producer(train_test['test']).map(batched=True, features=features)
 
         return DatasetDict({
-            "train" : train.with_format("torch") , 
+            "train" : train.with_format("torch"), 
             "test" : test.with_format("torch") 
         })
 
     # produce by maping data
     def _cs_producer(self,batch):
-        all_batch = []  # 
+        all_batch = []  #
         for doc in batch:
             seg_texts = doc['seg_texts']
             seg_labels = doc['labels']
             shared_boxes = doc['shared_boxes']
 
-            final_doc_dict = tok_util.doc_2_final_dict(shared_boxes,seg_texts,0)
+            final_doc_dict,_ = tok_util.doc_2_final_dict(shared_boxes,seg_texts)
             extended_labels = [self._extend_label(seg_text,seg_label) for seg_text,seg_label in zip(seg_texts,seg_labels)]
             final_doc_dict['labels'] = extended_labels
             # ['input_ids', 'attention_mask', 'dist', 'direct', 'seg_width', 'seg_height', 'labels']
@@ -150,7 +173,29 @@ class FUNSD:
         batch_dataset = datasets.concatenate_datasets(all_batch)    # concatenate all doc datasets
         return batch_dataset
 
-    
+    def _pair_producer(self,batch):
+        all_pairs = []
+        for doc in batch:
+            seg_texts = doc['seg_texts']
+            seg_labels = doc['labels']
+            shared_boxes = doc['shared_boxes']
+            links = doc['links']
+
+            final_doc_dict,neibors = tok_util.doc_2_final_dict(shared_boxes,seg_texts)
+            # a list of dict {direct: (dist,n_idx)}
+            for idx, direct2neibs in enumerate(neibors):
+                center_dict = final_doc_dict[idx]
+                # eight directions
+                for direct, (dist,neib_idx) in direct2neibs.items():
+                    neib_dict = final_doc_dict[neib_idx]
+                    if [idx,neib_idx] in links:
+                        link_label = 1
+                    else:
+                        link_label = 0
+                all_pairs.append(center_dict,neib_dict, link_label)
+        return all_pairs
+
+
     # get a seqeunce of labels for a single segment text;
     def _extend_label(self,seg_text,label):
         seg_words = seg_text.split(' ')
@@ -193,6 +238,10 @@ class FUNSD:
     #     encoding['bbox'] = torch.tensor(token_boxes)
     #     return encoding
 
+
+from preprocess_data import cs_util
+from PIL import Image, ImageDraw, ImageFont
+
 if __name__=='__main__':
     params = Params() 
     params.funsd_train = '/home/ubuntu/air/vrdu/datasets/FUNSD/training_data/'
@@ -200,12 +249,34 @@ if __name__=='__main__':
     params.layoutlm_large = '/home/ubuntu/air/vrdu/models/layoutlmv1.base'
     funsd = FUNSD(params)
     train_dataset = funsd.train_test_dataset['train']
-    '''
-    Dataset({
-        features: ['id', 'tokens', 'bboxes', 'ner_tags', 'image', 'seg_ids'],
-        num_rows: 149
-    })
-    '''
-    print(train_dataset)
+
+    for doc in train_dataset:
+        img_path = doc['img_path']
+        seg_texts = doc['seg_texts']
+        seg_labels = doc['labels']
+        shared_boxes = doc['shared_boxes']
+
+        # file_path = '/home/ubuntu/air/vrdu/datasets/images/imagesa/a/a/a/aaa06d00/50486482-6482.tif'
+        image = Image.open(img_path)
+        image = image.convert("RGB")
+        draw = ImageDraw.Draw(image, "RGBA")
 
 
+        neibs = cs_util.rolling_8neibors(shared_boxes)
+
+        # take one
+        idx = 0
+        direct2near = neibs[idx]
+        c_box = shared_boxes[idx]
+        print(seg_texts[idx], c_box)
+        # draw center
+        draw.rectangle(c_box, outline='red', width=3)
+        for direct, (dist, neib_idx) in direct2near.items():
+            n_box = shared_boxes[neib_idx]
+            print(direct, ':',seg_texts[neib_idx], n_box)
+            draw.rectangle(n_box, outline='orange', width=2)
+        
+        # image.show()
+        image = image.save("temp.jpg")
+
+        break
