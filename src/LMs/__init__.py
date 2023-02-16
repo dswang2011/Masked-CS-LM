@@ -3,7 +3,7 @@
 from LMs.LayoutLM import LayoutLMTokenclassifier
 from LMs.LayoutLM import LayoutLM4DocVQA
 from LMs.Roberta import GraphRobertaTokenClassifier, RobertaTokenClassifier
-from LMs.CSModel import CSTokenClassifier,CSMaskedLM
+from LMs.CSModel import CSTokenClassifier,CSMaskedLM, KeyValLinking
 
 def setup(opt):
     print('network:' + opt.network_type)
@@ -25,6 +25,8 @@ def setup(opt):
         elif opt.task_type == 'token-classifier':
             print('model: load csmodel for token classification')
             model = CSTokenClassifier(opt)
+        elif opt.task_type == 'link-binary':
+            model = KeyValLinking(opt)
     else:
         raise Exception('model not supported:{}'.format(opt.network_type))
 

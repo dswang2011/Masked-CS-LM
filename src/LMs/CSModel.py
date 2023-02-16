@@ -65,26 +65,39 @@ class CSMaskedLM(nn.Module):
 
         return outputs
 
-# class KeyValLinking(nn.Module):
-#     def __init__(self, opt, freeze_bert=False):
-#         super(KeyValLinking, self).__init__()
-#         self.opt = opt
-#         self.csmodel = LayoutLMModel.from_pretrained(opt.csmodel) 
 
-#         self.predict = nn.Linear(self.opt.input_dim, 2),
+class KeyValLinking(nn.Module):
+    def __init__(self, opt, freeze_bert=False):
+        super(KeyValLinking, self).__init__()
+        self.opt = opt
+        self.num_labels=2
+        self.csmodel = LayoutLMModel.from_pretrained(opt.csmodel) 
+        self.config = AutoConfig.from_pretrained(opt.layoutlm_large)
 
-#     def forward(cent_dict, edge_dict, link_label):
-#         outputs1 = self.csmodel(cent_dict**)
-#         outputs2 = self.csmodel(cent_dict**)
+        self.classifier = nn.Linear(self.config.hidden_size*2, self.num_labels),
 
-#         hidden_state1 = outputs1[0]
-#         pooled_output1 = hidden_state1[:, 0] # further pool
+    def forward(self, cent_dict, neib_dict, labels):
+        outputs1 = self.csmodel(**cent_dict)
+        outputs2 = self.csmodel(**neib_dict)
 
-#         hidden_state2 = outputs2[0]
-#         pooled_output2 = hidden_state2[:, 0] # further pool
+        hidden_state1 = outputs1[0]
+        pooled_output1 = hidden_state1[:, 0] # further token CLS as pool
+
+        hidden_state2 = outputs2[0]
+        pooled_output2 = hidden_state2[:, 0] # further token CLS as pool
         
-#         pair_pool = torch.cat([pooled_output1,pooled_output2],dim=-1)
-#         return self.predict(pair_pool)
+        pair_pool = torch.cat((pooled_output1,pooled_output2),dim=-1)
+        logits = self.classifier(pair_pool)
+
+        loss = None
+        if labels is not None:
+            loss_fct = CrossEntropyLoss()
+            loss = loss_fct(logits.view(-1,self.num_labels),labels.view(-1))
+
+        return ModelOutput(
+            loss = loss,
+            logits = logits
+        )
 
 
 # tokenization 

@@ -38,11 +38,13 @@ class FUNSD:
 
         # 2 get
         # self.cs_maps(self.train_test_dataset['train'])
-        self.trainable_dataset = self.get_trainable(self.train_test_dataset)
+        if opt.task_type == 'link-binary':
+            self.trainable_dataset = self.get_link_trainable(self.train_test_dataset)
+        else:
+            self.trainable_dataset = self.get_trainable(self.train_test_dataset)
         # 3 encode label column
         # dataset = dataset.cast_column(self.label_col_name, dst_feat)
 
-        
 
     def encode_class(self,dataset):
         dst_feat = ClassLabel(names = self.opt.label_list)
@@ -82,6 +84,7 @@ class FUNSD:
             shared_boxes = []
             pair_labels = []
             ids = []
+            id2label = {}
 
             file_path = os.path.join(ann_dir, file)
             with open(file_path, "r", encoding="utf8") as f:
@@ -102,6 +105,7 @@ class FUNSD:
                 seg_texts.append(text)
                 labels.append(label)
                 ids.append(item['id'])
+                id2label[item['id']] = label
 
                 for pair in item['linking']:
                     pair_labels.append(pair)
@@ -116,7 +120,8 @@ class FUNSD:
                 shared_boxes.append(cur_line_bboxes[0])
             # post-process pair links
             for i,pair in enumerate(pair_labels):
-                pair_comb = labels[pair[0]]+'_'+labels[pair[1]]
+                if pair[0]  not in id2label.keys() or pair[1] not in id2label.keys(): continue
+                pair_comb = id2label[pair[0]]+'_'+id2label[pair[1]]
                 if pair_comb != 'question_answer': continue
                 # reindex with natural idx
                 pair_labels[i] = [ids.index(pair[0]),ids.index(pair[1])]
@@ -135,7 +140,6 @@ class FUNSD:
 
 
     def get_trainable(self, train_test):
-
         features = Features({
             'input_ids': Sequence(feature=Value(dtype='int64')),
             'attention_mask': Sequence(Value(dtype='int64')),
@@ -152,6 +156,15 @@ class FUNSD:
             "train" : train.with_format("torch"), 
             "test" : test.with_format("torch") 
         })
+    
+    def get_link_trainable(self, train_test):
+        train = self._pair_producer(train_test['train']).map(batched=True)
+        test = self._pair_producer(train_test['test']).map(batched=True)
+
+        return DatasetDict({
+            "train" : train.with_format("torch"), 
+            "test" : test.with_format("torch") 
+        }) 
 
     # produce by maping data
     def _cs_producer(self,batch):
@@ -174,7 +187,8 @@ class FUNSD:
         return batch_dataset
 
     def _pair_producer(self,batch):
-        all_pairs = []
+        src_dicts, tgt_dicts = [],[]
+        labels = []
         for doc in batch:
             seg_texts = doc['seg_texts']
             seg_labels = doc['labels']
@@ -187,13 +201,18 @@ class FUNSD:
                 center_dict = final_doc_dict[idx]
                 # eight directions
                 for direct, (dist,neib_idx) in direct2neibs.items():
-                    neib_dict = final_doc_dict[neib_idx]
                     if [idx,neib_idx] in links:
                         link_label = 1
                     else:
+                        # only consider right side to bottom 
+                        if direct not in [1,2,8,7]: continue
                         link_label = 0
-                all_pairs.append(center_dict,neib_dict, link_label)
-        return all_pairs
+                    # add this link
+                    neib_dict = final_doc_dict[neib_idx]
+                    src_dicts.append(center_dict)
+                    tgt_dicts.append(neib_dict)
+                    labels.append(link_label)
+        return {'cent_dict':src_dicts, 'neib_dict':tgt_dicts, 'labels':labels}
 
 
     # get a seqeunce of labels for a single segment text;
@@ -255,6 +274,7 @@ if __name__=='__main__':
         seg_texts = doc['seg_texts']
         seg_labels = doc['labels']
         shared_boxes = doc['shared_boxes']
+        links = doc['links']
 
         # file_path = '/home/ubuntu/air/vrdu/datasets/images/imagesa/a/a/a/aaa06d00/50486482-6482.tif'
         image = Image.open(img_path)
@@ -265,7 +285,7 @@ if __name__=='__main__':
         neibs = cs_util.rolling_8neibors(shared_boxes)
 
         # take one
-        idx = 0
+        idx = 3
         direct2near = neibs[idx]
         c_box = shared_boxes[idx]
         print(seg_texts[idx], c_box)
@@ -275,7 +295,8 @@ if __name__=='__main__':
             n_box = shared_boxes[neib_idx]
             print(direct, ':',seg_texts[neib_idx], n_box)
             draw.rectangle(n_box, outline='orange', width=2)
-        
+            if [idx,neib_idx] in links:            
+                draw.line(c_box[:2]+n_box[:2], fill='green',width=2)
         # image.show()
         image = image.save("temp.jpg")
 
