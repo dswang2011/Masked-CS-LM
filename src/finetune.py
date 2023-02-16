@@ -17,7 +17,7 @@ def parse_args(config_path):
     parser = argparse.ArgumentParser(description='run the model')
     parser.add_argument('--config', dest='config_file', default = config_path)
     return parser.parse_args()
-    
+
 if __name__=='__main__':
 
     # Section 1, parse parameters
@@ -42,18 +42,13 @@ if __name__=='__main__':
     else:
         model = LMs.setup(params).to(params.device)
 
-    # model 2
-    params.mypretrained = model
-    finetune_model = LMs.setup(params).to(params.device)
 
     # section 4, saving path for output model
     params.dir_path = trainer.create_save_dir(params)    # prepare dir for saving best models
 
-    # section 5, load data; prepare output_dim/num_labels, id2label, label2id for section3; 
-    # 4.1 traditional train
-
+    # section 5, load data; prepare output_dim/num_labels, id2label, label2id for section3;
     print(mydata.trainable_dataset)
-    best_f1 = trainer.finetune(params, finetune_model, mydata)
+    best_f1 = trainer.finetune(params, model, mydata)
 
     # section 5, inference only (on test_dataset)
     # inferencer.inference(params,model,mydata,'v3_base_benchmark_Jan_1pm.json')

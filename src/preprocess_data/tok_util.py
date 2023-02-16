@@ -64,7 +64,7 @@ def cs_encoding(c_encodings, s_encodings, neibors):
     return res
 
 
-def get_relative_info(boxes,neibors, token_nums):
+def get_relative_info(boxes,neibors):
     seg_widths, seg_heights = [],[]
     for idx, neib in enumerate(neibors):    # (dist, direct, neib_idx)
         w,h = boxes[idx][2]-boxes[idx][0], boxes[idx][3]-boxes[idx][1]
@@ -83,17 +83,18 @@ def get_relative_info(boxes,neibors, token_nums):
         seg_heights.append(s_h)
     return seg_widths, seg_heights
 
-def doc_2_final_dict(boxes,texts,token_nums):
+
+def doc_2_final_dict(boxes,texts):
     neibors = cs_util.rolling_8neibors(boxes)
     c_encodings, s_encodings = pair_encoding(texts,tokenizer)
     # get info 1
     final_doc_dict = cs_encoding(c_encodings, s_encodings, neibors)
     # get info 2
-    ws,hs = get_relative_info(boxes, neibors, token_nums)
+    ws,hs = get_relative_info(boxes, neibors)
     final_doc_dict['seg_width'] = ws
     final_doc_dict['seg_height'] = hs
 
-    return final_doc_dict
+    return final_doc_dict,neibors
 
 
 from PIL import Image, ImageDraw, ImageFont

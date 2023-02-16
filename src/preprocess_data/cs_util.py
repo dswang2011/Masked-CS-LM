@@ -4,7 +4,7 @@ import math
 import numpy as np
 from math import sqrt
 
-import tesseract4img
+# import tesseract4img
     
 
 def _rule_polar(rect_src : list, rect_dst : list) -> Tuple[int, int]:
@@ -99,8 +99,8 @@ def rolling_8neibors(bboxs):
         neibors.append(direct2near)
     return neibors
 
-from PIL import Image, ImageDraw, ImageFont
-import IPython.display as display
+# from PIL import Image, ImageDraw, ImageFont
+# import IPython.display as display
 
 if __name__=='__main__':
     file_path = '/home/ubuntu/air/vrdu/datasets/docvqa/test/documents/ffdw0217_13.png'

@@ -65,6 +65,27 @@ class CSMaskedLM(nn.Module):
 
         return outputs
 
+# class KeyValLinking(nn.Module):
+#     def __init__(self, opt, freeze_bert=False):
+#         super(KeyValLinking, self).__init__()
+#         self.opt = opt
+#         self.csmodel = LayoutLMModel.from_pretrained(opt.csmodel) 
+
+#         self.predict = nn.Linear(self.opt.input_dim, 2),
+
+#     def forward(cent_dict, edge_dict, link_label):
+#         outputs1 = self.csmodel(cent_dict**)
+#         outputs2 = self.csmodel(cent_dict**)
+
+#         hidden_state1 = outputs1[0]
+#         pooled_output1 = hidden_state1[:, 0] # further pool
+
+#         hidden_state2 = outputs2[0]
+#         pooled_output2 = hidden_state2[:, 0] # further pool
+        
+#         pair_pool = torch.cat([pooled_output1,pooled_output2],dim=-1)
+#         return self.predict(pair_pool)
+
 
 # tokenization 
 class CSTokenClassifier(nn.Module):

@@ -84,12 +84,12 @@ def pretrain(opt, model, mydata):
             else:
                 loss.backward()
             optimizer.step()  # Update parameters based on gradients.
-
+            # if idx>10: break
         # eval mode
         if opt.task_type == 'cspretrain':
             # if loss.item()<best_loss:
             best_loss=loss.item()
-            csmodel = model.csmodel.layoutlm  # to be saved
+            csmodel = model.cs_layoutlm  # to be saved
             save_pretrain_model(opt, csmodel ,{'loss':best_loss})
             print('The best layoutlm model saved with loss:', best_loss, ' to ', opt.dir_path)
 
