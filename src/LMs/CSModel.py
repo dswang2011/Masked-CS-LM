@@ -17,13 +17,13 @@ class CSMaskedLM(nn.Module):
     def __init__(self, opt, freeze_bert=False):
         super(CSMaskedLM, self).__init__()
         self.opt = opt
-        self.config = AutoConfig.from_pretrained(opt.layoutlm_large)
+        self.config = AutoConfig.from_pretrained(opt.csmodel)
 
         self.cs_layoutlm = LayoutLMModel.from_pretrained(opt.csmodel)
         self.cls = LayoutLMOnlyMLMHead(self.config)
 
         # self.csmodel = LayoutLMForMaskedLM.from_pretrained(opt.layoutlm_large)
-        print('Find the path of configuration: ', opt.layoutlm_large)
+        print('Find the path of configuration: ', opt.csmodel)
         # freeze the bert model
         if freeze_bert:
             for param in self.roberta.parameters():
@@ -72,7 +72,7 @@ class KeyValLinking(nn.Module):
         self.opt = opt
         self.num_labels=2
         self.csmodel = LayoutLMModel.from_pretrained(opt.csmodel) 
-        self.config = AutoConfig.from_pretrained(opt.layoutlm_large)
+        self.config = AutoConfig.from_pretrained(opt.csmodel)
 
         self.classifier = nn.Linear(self.config.hidden_size*2, self.num_labels),
 
@@ -111,7 +111,7 @@ class CSTokenClassifier(nn.Module):
         # hidden size = 1024
         self.classifier = nn.Linear(1024, self.num_labels)   
 
-        print('Find the path of configuration: ', opt.layoutlm_large)
+        print('Find the path of configuration: ', opt.csmodel)
         # freeze the bert model
         if freeze_bert:
             for param in self.roberta.parameters():
