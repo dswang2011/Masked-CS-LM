@@ -148,7 +148,7 @@ class FUNSD:
             'seg_width': Sequence(Value(dtype='int64')),
             'seg_height': Sequence(Value(dtype='int64')),
             # 'labels': Sequence(feature=Value(dtype='int64')),
-            'labels': Sequence(feature=ClassLabel(num_classes=7, names=['O', 'B-HEADER', 'I-HEADER', 'B-QUESTION', 'I-QUESTION', 'B-ANSWER', 'I-ANSWER'], id=None), length=-1, id=None),
+            'labels': Sequence(feature=ClassLabel(num_classes=7, names=self.opt.label_list, id=None), length=-1, id=None),
         })
         train = self._cs_producer(train_test['train']).map(batched=True, features=features)
         test = self._cs_producer(train_test['test']).map(batched=True, features=features)
