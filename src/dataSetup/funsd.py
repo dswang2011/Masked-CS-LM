@@ -1,7 +1,7 @@
 import sys
 sys.path.append('../')
 import os
-from datasets import load_dataset, Features, Sequence, Value
+from datasets import load_dataset, Features, Sequence, Value, ClassLabel
 from datasets import Dataset, DatasetDict
 from utils.params import Params
 import json
@@ -17,6 +17,8 @@ class FUNSD:
         self.pad_token_label = -100
         self.id2label = {0: 'O', 1: 'B-HEADER', 2: 'I-HEADER', 3: 'B-QUESTION', 4: 'I-QUESTION', 5: 'B-ANSWER', 6: 'I-ANSWER'}
         self.label2id = {v:k for k,v in self.id2label.items()}
+        self.dst_feat = ClassLabel(num_classes=7, names = self.opt.label_list)
+
         # set glob param
         self.opt.num_labels = len(self.id2label.keys()) # for token classification usage;
         self.opt.label_list = list(self.id2label.values())  #
@@ -47,10 +49,9 @@ class FUNSD:
 
 
     def encode_class(self,dataset):
-        dst_feat = ClassLabel(names = self.opt.label_list)
         # Mapping Labels to IDs
         def map_label2id(example):
-            example[self.label_col_name] = [dst_feat.str2int(ner_label) for ner_label in example[self.label_col_name]]
+            example[self.label_col_name] = [self.dst_feat.str2int(ner_label) for ner_label in example[self.label_col_name]]
             return example
         dataset = dataset.map(map_label2id, batched=True)
         # type to ClassLabel object
@@ -148,7 +149,7 @@ class FUNSD:
             'seg_width': Sequence(Value(dtype='int64')),
             'seg_height': Sequence(Value(dtype='int64')),
             # 'labels': Sequence(feature=Value(dtype='int64')),
-            'labels': Sequence(feature=ClassLabel(num_classes=7, names=self.opt.label_list, id=None), length=-1, id=None),
+            'labels': Sequence(feature=self.dst_feat, length=-1, id=None),
         })
         train = self._cs_producer(train_test['train']).map(batched=True, features=features)
         test = self._cs_producer(train_test['test']).map(batched=True, features=features)
@@ -219,19 +220,19 @@ class FUNSD:
 
     # get a seqeunce of labels for a single segment text;
     def _extend_label(self,seg_text,label):
-        dst_feat = ClassLabel(names = self.opt.label_list)
+        
         
         seg_words = seg_text.split(' ')
         token_labels = []                  
         # extend for each word 
         if label == 'other':
-            id_other = dst_feat.str2int('O')
+            id_other = self.dst_feat.str2int('O')
             for w in seg_words:
                 word_tokens = self.tokenizer.tokenize(w)
                 token_labels.extend([id_other] + [self.pad_token_label] * (len(word_tokens) - 1))
         else:
-            id_begin = dst_feat.str2int("B-"+label.upper())
-            id_inside = dst_feat.str2int("I-"+label.upper())
+            id_begin = self.dst_feat.str2int("B-"+label.upper())
+            id_inside = self.dst_feat.str2int("I-"+label.upper())
             # first word
             word_tokens = self.tokenizer.tokenize(seg_words[0])
             token_labels.extend([id_begin] + [self.pad_token_label] * (len(word_tokens) - 1))
