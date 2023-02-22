@@ -147,7 +147,8 @@ class FUNSD:
             'direct': Sequence(Value(dtype='int64')),
             'seg_width': Sequence(Value(dtype='int64')),
             'seg_height': Sequence(Value(dtype='int64')),
-            'labels': Sequence(feature=Value(dtype='int64'))
+            # 'labels': Sequence(feature=Value(dtype='int64')),
+            'labels': Sequence(feature=ClassLabel(num_classes=7, names=['O', 'B-HEADER', 'I-HEADER', 'B-QUESTION', 'I-QUESTION', 'B-ANSWER', 'I-ANSWER'], id=None), length=-1, id=None),
         })
         train = self._cs_producer(train_test['train']).map(batched=True, features=features)
         test = self._cs_producer(train_test['test']).map(batched=True, features=features)
@@ -168,6 +169,7 @@ class FUNSD:
 
     # produce by maping data
     def _cs_producer(self,batch):
+
         all_batch = []  #
         for doc in batch:
             seg_texts = doc['seg_texts']
@@ -217,17 +219,19 @@ class FUNSD:
 
     # get a seqeunce of labels for a single segment text;
     def _extend_label(self,seg_text,label):
+        dst_feat = ClassLabel(names = self.opt.label_list)
+        
         seg_words = seg_text.split(' ')
         token_labels = []                  
         # extend for each word 
         if label == 'other':
-            id_other = self.label2id['O']
+            id_other = dst_feat.str2int('O')
             for w in seg_words:
                 word_tokens = self.tokenizer.tokenize(w)
                 token_labels.extend([id_other] + [self.pad_token_label] * (len(word_tokens) - 1))
         else:
-            id_begin = self.label2id["B-"+label.upper()]
-            id_inside = self.label2id["I-"+label.upper()]
+            id_begin = dst_feat.str2int("B-"+label.upper())
+            id_inside = dst_feat.str2int("I-"+label.upper())
             # first word
             word_tokens = self.tokenizer.tokenize(seg_words[0])
             token_labels.extend([id_begin] + [self.pad_token_label] * (len(word_tokens) - 1))

@@ -44,7 +44,7 @@ def generate_and_save(set_id, imgs):
             print('detect empty content')
             continue
         texts, boxes, token_nums = tesseract4img.doc_to_segs(one_doc)
-        final_dict = tok_util.doc_2_final_dict(boxes,texts,token_nums)
+        final_dict,_ = tok_util.doc_2_final_dict(boxes,texts)   # return: dict, neib
         doc_dataset = Dataset.from_dict(final_dict) # with_format("torch")
 
         all_doc_dataset.append(doc_dataset)
@@ -61,7 +61,7 @@ if __name__=="__main__":
     random.Random(5).shuffle(files)
 
     subsets = list(split(files, 20))
-    for i in range(0,len(subsets)):
+    for i in range(7,len(subsets)):
         subset = subsets[i]
         print(len(subset))
         saveto = generate_and_save(i,subset)

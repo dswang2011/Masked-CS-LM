@@ -46,7 +46,7 @@ if __name__=='__main__':
     # best_f1 = trainer.train(params, model, mydata)
 
     # 4.2 train many datasets
-    for i in range(0, 3):
+    for i in range(3, 8):
         params.rvl_cdip = '/home/ubuntu/air/vrdu/datasets/rvl_pretrain_datasets/'+str(i)+'_fixed_bert.hf'
         mydata = pretrain_dataset.setup(params)
         best_f1 = trainer.pretrain(params, model, mydata)
