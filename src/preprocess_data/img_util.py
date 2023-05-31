@@ -24,29 +24,29 @@ def _load_image(image_path):
 
 # double checked
 def _adjust_shared_bbox(doc_dict):
-    seg_ids = doc_dict['seg_ids']
-    bboxes = doc_dict['bboxes']
-    doc_dict['share_bboxes'] = []
-    if not seg_ids or not bboxes or len(seg_ids)!=len(bboxes):
+    block_ids = doc_dict['block_ids']
+    tboxes = doc_dict['tboxes']
+    doc_dict['bboxes'] = []
+    if not block_ids or not tboxes or len(block_ids)!=len(tboxes):
         return 
 
-    block_num = seg_ids[0]  # 11
-    window_bboxes = [bboxes[0]]
+    block_num = block_ids[0]  # 11
+    window_bboxes = [tboxes[0]]
     l = 0
-    for r in range(1,len(seg_ids)):
-        curr_seg = seg_ids[r]
+    for r in range(1,len(block_ids)):
+        curr_seg = block_ids[r]
         if curr_seg!=block_num:
             new_bboxes = _get_line_bbox(window_bboxes)  
-            doc_dict['share_bboxes'] += new_bboxes
+            doc_dict['bboxes'] += new_bboxes
             # reset the params
             l = r
             block_num = curr_seg
-            window_bboxes = [bboxes[r]]
+            window_bboxes = [tboxes[r]]
         else:
-            window_bboxes.append(bboxes[r])
+            window_bboxes.append(tboxes[r])
     # process the last one
     new_bboxes = _get_line_bbox(window_bboxes)
-    doc_dict['share_bboxes'] += new_bboxes
+    doc_dict['bboxes'] += new_bboxes
     return doc_dict
 
 def _pixel_feature(image_path):

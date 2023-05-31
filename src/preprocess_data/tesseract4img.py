@@ -49,15 +49,19 @@ def doc_to_segs(one_doc):
     return texts,bboxes, word_nums
 
 
-def image_to_doc(image_path, adjust_share_bbox=True, box_norm=True):
+# one image to doc dict
+def image_to_doc(image_path):
     '''
     rtype: return one_doc, where the bbox and h/w are normalized to 1000*1000
     '''
     # save to: (and will be extended with a 'shared_boxes')
-    one_doc = {'tokens':[],'bboxes':[], 'seg_ids':[],'image':None}
+    one_doc = {'tokens':[],'tboxes':[],'bboxes':[], 'block_ids':[],'image_path':image_path}
 
     image, size = _load_image(image_path)
-    data = pytesseract.image_to_data(Image.open(image_path),output_type='dict')
+    one_doc['size'] = size
+
+    myconfig = r'--psm 11 --oem 3'
+    data = pytesseract.image_to_data(image, config=myconfig, output_type='dict', timeout=10)
 
     texts = data['text']
     page_nums = data['page_num']
@@ -87,15 +91,11 @@ def image_to_doc(image_path, adjust_share_bbox=True, box_norm=True):
 
         # produce one sample
         one_doc['tokens'].append(token)
-        if box_norm:
-            one_doc['bboxes'].append(img_util._normalize_bbox([x0,y0,x1,y1], size))
-        else:
-            one_doc['bboxes'].append([x0,y0,x1,y1])
-        one_doc['seg_ids'].append(block_num)
+        one_doc['tboxes'].append([x0,y0,x1,y1])
+        one_doc['block_ids'].append(block_num)
+    # add the shared box: bboxes
+    one_doc = img_util._adjust_shared_bbox(one_doc)
 
-    # adjust the shared box
-    if adjust_share_bbox:
-        one_doc = img_util._adjust_shared_bbox(one_doc)
     return one_doc
 
 

@@ -24,6 +24,7 @@ class FUNSD:
         self.opt.label_list = list(self.id2label.values())  #
 
         self.tokenizer = AutoTokenizer.from_pretrained(opt.layoutlm_large) #layoutLMv1.large tokenizer
+        # tokenizer = BertTokenizerFast.from_pretrained("bert-base-uncased") 
 
         # 1 load raw dataset; 2 map to trainable dataset
         # 1 get raw data
@@ -306,3 +307,46 @@ if __name__=='__main__':
         image = image.save("temp.jpg")
 
         break
+
+
+
+# align extended tokens
+def align_labels_with_tokens(labels, word_ids):
+    # assist function
+    def _shift_label(label):
+        # if the label is B-xxx we change it to I-xxx
+        if label%2 == 1:
+            label +=1
+        return label
+
+    new_labels = []
+    current_word = None
+    for word_id in word_ids:
+        if word_id is None:
+            new_labels.append(-100)
+        elif word_id != current_word:
+            # start of a new word
+            current_word = word_id
+            new_labels.append(labels[word_id])
+        else:
+            # same word as previous token
+            new_labels.append(_shift_labels(labels[word_id]))
+    return new_labels
+
+# update the labels column
+def tokenize_and_align_labels(examples):
+    tokenized_inputs = tokenizer(examples['tokens'], truncation=True, is_spilt_into_word=True)
+    new_labels = []
+    for i,labels in enumerate(examples['labels']):
+        word_ids = tokenized_inputs.word_ids(i)
+        new_labels.append(align_labels_with_tokens(labels,word_ids))    # align function 
+    tokenized_inputs['labels'] = new_labels
+    return tokenized_inputs
+
+
+# usage
+tokenized_datasets = raw_datasets.map(tokenize_and_align_labels, batched=True)
+# or (cleaned)
+tokenized_datasets = raw_datasets.map(tokenize_and_align_labels, batched=True, remove_columns = raw_datasets.column_names))
+
+
