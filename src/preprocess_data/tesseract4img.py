@@ -21,15 +21,15 @@ def doc_to_segs(one_doc):
     texts,bboxes = [],[]
     word_nums = []
 
-    seg_ids = one_doc['seg_ids']
+    block_ids = one_doc['block_ids']
     tokens = one_doc['tokens']
-    boxes = one_doc['share_bboxes']   # shared boxes, share_bboxes, bboxes; here, it must be shared because it is seg oriented
+    boxes = one_doc['bboxes']   # shared boxes, share_bboxes, bboxes; here, it must be shared because it is seg oriented
 
-    block_num = seg_ids[0]  # 11
+    block_num = block_ids[0]  # 11
     window_tokens = [tokens[0]]
     l = 0
-    for i in range(1,len(seg_ids)):
-        curr_id = seg_ids[i]
+    for i in range(1,len(block_ids)):
+        curr_id = block_ids[i]
         if curr_id!=block_num:
             word_nums.append(len(window_tokens))
             text = ' '.join(window_tokens)
@@ -50,7 +50,7 @@ def doc_to_segs(one_doc):
 
 
 # one image to doc dict
-def image_to_doc(image_path):
+def image_to_doc(image_path, box_norm = True):
     '''
     rtype: return one_doc, where the bbox and h/w are normalized to 1000*1000
     '''
@@ -91,7 +91,11 @@ def image_to_doc(image_path):
 
         # produce one sample
         one_doc['tokens'].append(token)
-        one_doc['tboxes'].append([x0,y0,x1,y1])
+        tbox = [x0,y0,x1,y1]
+        if box_norm:
+            tbox = img_util._normalize_bbox(tbox,size)       
+
+        one_doc['tboxes'].append(tbox)
         one_doc['block_ids'].append(block_num)
     # add the shared box: bboxes
     one_doc = img_util._adjust_shared_bbox(one_doc)
