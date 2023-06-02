@@ -61,7 +61,10 @@ def image_to_doc(image_path, box_norm = True):
     one_doc['size'] = size
 
     myconfig = r'--psm 11 --oem 3'
-    data = pytesseract.image_to_data(image, config=myconfig, output_type='dict', timeout=10)
+    try:
+        data = pytesseract.image_to_data(image, config=myconfig, output_type='dict', timeout=10)
+    except:
+        return None
 
     texts = data['text']
     page_nums = data['page_num']

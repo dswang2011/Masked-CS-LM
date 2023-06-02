@@ -8,22 +8,22 @@ import random
 
 
 tgt_prob = {
-    '0':0.15,
+    '0':0.1,
     '1':1.0,
-    '2':0.15,
-    '3':0.15,
-    '4':0.25,
-    '5':0.45,
-    '6':0.2,
-    '7':0.55,
+    '2':0.1,
+    '3':0.1,
+    '4':0.2,
+    '5':0.4,
+    '6':0.15,
+    '7':0.5,
     '8':0.1,
-    '9':0.15,
+    '9':0.1,
     '10':0.7,
     '11':0.95,
-    '12':0.15,
+    '12':0.1,
     '13':0.7,
     '14':0.3,
-    '15':0.15,
+    '15':0.1,
 }
 
 
@@ -91,9 +91,10 @@ def get_ratioly_sampled(imgs,labels):
 if __name__=="__main__":
     files, labels = get_file_list()
     sub_imgs, sub_labels = get_ratioly_sampled(files,labels)    # sampled
-    file_part5, label_part5 = split(sub_imgs,5), split(sub_labels,5)
+    file_part10, label_part10 = split(sub_imgs,10), split(sub_labels,10)
 
-    for i, (sub_files, sub_labels) in enumerate(zip(file_part5, label_part5)):
+    for i, (sub_files, sub_labels) in enumerate(zip(file_part10, label_part10)):
+        if i<2: continue
         print(len(sub_files))
         saveto = generate_and_save(i,sub_files)
         # print('saved to:', saveto)

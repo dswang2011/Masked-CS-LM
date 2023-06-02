@@ -2,16 +2,17 @@ import sys
 sys.path.append('../')
 import torch
 from transformers import RobertaTokenizer,RobertaForMaskedLM
-from preprocess_data import cs_util
+from preprocess import cs_util
 
 from transformers import LayoutLMTokenizer,LayoutLMTokenizerFast
 from transformers import AutoTokenizer
+import transformers
 
 # tokenizer = RobertaTokenizer.from_pretrained('/home/ubuntu/resources/roberta.base.squad')
 # tokenizer = LayoutLMTokenizer.from_pretrained('/home/ubuntu/air/vrdu/models/layoutlmv1.large')
 tokenizer = LayoutLMTokenizer.from_pretrained("/home/ubuntu/air/vrdu/models/layoutlmv1.large")
 # tf_tokenizer = TFBertTokenizer.from_tokenizer(tokenizer)
-
+# assert isinstance(tokenizer, transformers.PreTrainedTokenizerFast)  # get sub
 
 def _empty_s_encod():
     '''

@@ -1,4 +1,4 @@
-from datasets import load_from_disk, Features, Sequence, Value
+from datasets import load_from_disk, Features, Sequence, Value, concatenate_datasets
 
 from transformers import LayoutLMTokenizer,AutoTokenizer
 import torch
@@ -18,15 +18,21 @@ class RVLCDIP:
         self.opt = opt
         
         # tokenizer
-        self.tokenizer = AutoTokenizer.from_pretrained(opt.layoutlm_large)
+        # self.tokenizer = AutoTokenizer.from_pretrained(opt.layoutlm_large)
+        self.tokenizer = AutoTokenizer.from_pretrained("/home/ubuntu/air/vrdu/models/layoutlmv1.large")
 
         # get dataset from saved hf;
         print('load data from:', opt.rvl_cdip)
-        self.train_dataset = self.get_data(opt.rvl_cdip).with_format("torch")
-        # get proper masks and map to labels;
-        self.masked_train_dataset = self.masked_inputs(self.train_dataset).with_format("torch")
+        ds_list = []
+        for i in range(3):
+            file_path = '/home/ubuntu/air/vrdu/datasets/rvl_pretrain_datasets/weighted_'+str(i)+'_cs.hf'
+            raw_ds = self.get_raw_ds(file_path)
+            masked_ds = self.masked_inputs(raw_ds)
+            ds_list.append(masked_ds)
+        self.trainable_ds = concatenate_datasets(ds_list).shuffle(seed=88)
 
-    def get_data(self, hf_path):
+
+    def get_raw_ds(self, hf_path):
         return load_from_disk(hf_path)
 
     # def map_one_match(encodings):
@@ -81,6 +87,6 @@ class RVLCDIP:
             'seg_height': Sequence(Value(dtype='int64')),
             'labels': Sequence(feature=Value(dtype='int64'))
         })
-        dataset = dataset.map(map_label, batched=True, features = features)
+        dataset = dataset.map(map_label, batched=True, features = features).with_format("torch")
 
         return dataset
